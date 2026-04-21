@@ -15,7 +15,7 @@ const ParticipantLogin = () => {
         }
         try {
         // API call to the backend login endpoint
-            const response = await axios.post('http://localhost:5001/api/users/login', {
+            const response = await axios.post('/api/users/login', {
             participantId
             });
 

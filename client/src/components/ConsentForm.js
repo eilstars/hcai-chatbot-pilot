@@ -124,7 +124,7 @@ const ConsentForm = () => {
     const handleContinue = async () => {
         if (!allChecked) return;
         try {
-            const response = await axios.post('http://localhost:5001/api/users/update-progress', {
+            const response = await axios.post('/api/users/update-progress', {
                 participantId: user.participantId,
                 progress: 'pre-survey',
                 consented: true

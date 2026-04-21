@@ -84,7 +84,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
         setLoading(true);
 
         try {
-            const response = await axios.post('http://localhost:5001/api/chat/message', {
+            const response = await axios.post('/api/chat/message', {
                 participantId,
                 message: userMsg,
                 round,
@@ -107,7 +107,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
 
             // Log the user message after prompt generation so we can persist exact prompts used.
             try {
-                await axios.post('http://localhost:5001/api/chat/log-message', {
+                await axios.post('/api/chat/log-message', {
                     participantId,
                     round,
                     sender: 'user',
@@ -135,7 +135,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
             
             // Log the bot response with intervention info
             try {
-                await axios.post('http://localhost:5001/api/chat/log-message', {
+                await axios.post('/api/chat/log-message', {
                     participantId,
                     round,
                     sender: 'bot',
@@ -171,7 +171,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                 round,
                 questionOrder: learningQuestions.map((q) => q.id)
             };
-            const resp = await axios.post('http://localhost:5001/api/tests/submit', payload);
+            const resp = await axios.post('/api/tests/submit', payload);
             const { isCorrect, explanation, correctAnswer } = resp.data;
             setFeedback(prev => ({ ...prev, [currentQId]: { isCorrect, explanation, correctAnswer } }));
         } catch (err) {
@@ -191,7 +191,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
 
             setLoading(true);
             try {
-                const response = await axios.post('http://localhost:5001/api/chat/message', {
+                const response = await axios.post('/api/chat/message', {
                     participantId,
                     message: userMsg,
                     round,
@@ -216,7 +216,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                 
                 // Log bot response
                 try {
-                    await axios.post('http://localhost:5001/api/chat/log-message', {
+                    await axios.post('/api/chat/log-message', {
                         participantId,
                         round,
                         sender: 'bot',

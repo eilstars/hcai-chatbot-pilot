@@ -2,6 +2,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import 'dotenv/config';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Import all the route handlers
 import usersRouter from './routes/users.js';
@@ -10,6 +12,8 @@ import surveysRouter from './routes/surveys.js';
 import chatRouter from './routes/chat.js';
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(cors());
@@ -26,6 +30,15 @@ app.use('/api/users', usersRouter);
 app.use('/api/tests', testsRouter);
 app.use('/api/surveys', surveysRouter);
 app.use('/api/chat', chatRouter);
+
+if (process.env.NODE_ENV === 'production') {
+	const clientBuildPath = path.resolve(__dirname, '../client/build');
+	app.use(express.static(clientBuildPath));
+
+	app.get(/^(?!\/api).*/, (_req, res) => {
+		res.sendFile(path.join(clientBuildPath, 'index.html'));
+	});
+}
 
 // --- Server Listener ---
 const PORT = process.env.PORT || 5000;

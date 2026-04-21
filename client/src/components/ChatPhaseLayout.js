@@ -12,7 +12,7 @@ const ChatPhaseLayout = ({ round, preTestType, nextProgress, testTypeToSubmit })
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get(`http://localhost:5001/api/tests/full-results/${user.participantId}/${preTestType}`);
+                const response = await axios.get(`/api/tests/full-results/${user.participantId}/${preTestType}`);
                 setPreTestResults(response.data.fullResults);
             } catch (error) {
                 console.error("Error fetching pre-test results:", error);
@@ -26,7 +26,7 @@ const ChatPhaseLayout = ({ round, preTestType, nextProgress, testTypeToSubmit })
 
     const handleComplete = async () => {
         try {
-            const response = await axios.post('http://localhost:5001/api/users/update-progress', {
+            const response = await axios.post('/api/users/update-progress', {
                 participantId: user.participantId,
                 progress: nextProgress
             });

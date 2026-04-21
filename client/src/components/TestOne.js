@@ -149,7 +149,7 @@ const TestOne = ({ testType, nextProgress }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://localhost:5001/api/tests/submit', {
+            const response = await axios.post('/api/tests/submit', {
                 participantId: user.participantId,
                 testType,
                 answers,

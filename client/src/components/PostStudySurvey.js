@@ -14,7 +14,7 @@ const PostStudySurvey = ({ nextProgress }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://localhost:5001/api/surveys/submit', {
+            const response = await axios.post('/api/surveys/submit', {
                 participantId: user.participantId,
                 surveyType: 'post-study',
                 responses,

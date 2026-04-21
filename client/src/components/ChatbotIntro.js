@@ -9,7 +9,7 @@ const ChatbotIntro = ({ nextProgress }) => {
     const handleContinue = async () => {
         try {
             // Update user progress to the first question (q1)
-            const response = await axios.post('http://localhost:5001/api/users/update-progress', {
+            const response = await axios.post('/api/users/update-progress', {
                 participantId: user.participantId,
                 progress: nextProgress // Should be "chat-1-q1"
             });

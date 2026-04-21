@@ -1,0 +1,11 @@
+{
+  "name": "hcai-chatbot-pilot",
+  "private": true,
+  "scripts": {
+    "start": "node backend/server.js",
+    "heroku-postbuild": "npm install --prefix backend ; npm install --prefix client ; npm run build --prefix client"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

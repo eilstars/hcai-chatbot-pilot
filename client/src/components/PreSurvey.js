@@ -15,7 +15,7 @@ const PreSurvey = ({ nextProgress }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:5001/api/surveys/submit', {
+      const response = await axios.post('/api/surveys/submit', {
         participantId: user.participantId,
         surveyType: 'initial-ai',
         responses: responses,
