@@ -76,29 +76,6 @@ const DemographicsSurvey = ({ nextProgress }) => {
 
                 <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Question 2</p>
-                    <label htmlFor="age" className="block text-base font-semibold text-gray-800 mb-3 leading-snug">
-                        What is your age?
-                    </label>
-                    <select
-                        id="age"
-                        name="age"
-                        onChange={handleChange}
-                        required
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    >
-                        <option value="">Select an option</option>
-                        <option value="18-24">18-24</option>
-                        <option value="25-34">25-34</option>
-                        <option value="35-44">35-44</option>
-                        <option value="45-54">45-54</option>
-                        <option value="55-64">55-64</option>
-                        <option value="65-74">65-74</option>
-                        <option value="75+">75 or older</option>
-                    </select>
-                </div>
-
-                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Question 3</p>
                     <p className="text-base font-semibold text-gray-800 mb-2 leading-snug">
                         Which of the following(s) best describe you?
                     </p>
@@ -130,30 +107,7 @@ const DemographicsSurvey = ({ nextProgress }) => {
                 </div>
 
                 <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Question 4</p>
-                    <label htmlFor="education" className="block text-base font-semibold text-gray-800 mb-3 leading-snug">
-                        What is the highest degree or level of school you have completed?
-                    </label>
-                    <select
-                        id="education"
-                        name="education"
-                        onChange={handleChange}
-                        required
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    >
-                        <option value="">Select an option</option>
-                        <option value="lessThanHighSchool">Less than a high school diploma</option>
-                        <option value="highSchoolOrEquivalent">High school degree or equivalent</option>
-                        <option value="someCollegeOrAssociate">Some college or Associate degree (2-year)</option>
-                        <option value="bachelors">Bachelor's degree (4-year)</option>
-                        <option value="masters">Master's degree</option>
-                        <option value="doctorate">Doctorate degree</option>
-                        <option value="other">Other</option>
-                    </select>
-                </div>
-
-                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Question 5</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Question 3</p>
                     <label htmlFor="englishProficiency" className="block text-base font-semibold text-gray-800 mb-3 leading-snug">
                         What is your proficiency level in English?
                     </label>
@@ -169,6 +123,26 @@ const DemographicsSurvey = ({ nextProgress }) => {
                         <option value="2">2 Limited Working Proficiency</option>
                         <option value="3">3 Professional Working Proficiency</option>
                         <option value="4">4 Native/Bilingual Proficiency</option>
+                    </select>
+                </div>
+
+                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Question 4</p>
+                    <label htmlFor="microeconomicsExperience" className="block text-base font-semibold text-gray-800 mb-3 leading-snug">
+                        Which of the following best describes your experience with Microeconomics?
+                    </label>
+                    <select
+                        id="microeconomicsExperience"
+                        name="microeconomicsExperience"
+                        onChange={handleChange}
+                        required
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    >
+                        <option value="">Select an option</option>
+                        <option value="apOrCollege">I have taken either AP Microeconomics or a college Microeconomics course.</option>
+                        <option value="nonCollege">I have taken a non-college-level Microeconomics class.</option>
+                        <option value="someUnderstanding">I have some understanding of Microeconomics, but have not taken a formal course.</option>
+                        <option value="littleOrNoUnderstanding">I have little or no understanding of Microeconomics.</option>
                     </select>
                 </div>
 

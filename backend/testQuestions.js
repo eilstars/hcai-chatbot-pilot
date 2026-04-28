@@ -19171,6 +19171,30 @@ export const questions = [
       0.05960982292890549,
       -0.07511206716299057
     ]
+  },
+  {
+    "id": "attention-check-pretest",
+    "text": "What color is a dollar bill?",
+    "options": {
+      "a": "Red",
+      "b": "Orange",
+      "c": "Green",
+      "d": "Yellow"
+    },
+    "answer": "c",
+    "learningGoal": "Confirm attention during the learning session",
+    "optionFeedback": {
+      "a": "Dollar bills are not red.",
+      "b": "Dollar bills are not orange.",
+      "c": "Correct. Dollar bills are green.",
+      "d": "Dollar bills are not yellow."
+    },
+    "explanation": "A dollar bill is green.",
+    "keyTerms": [
+      "attention check"
+    ],
+    "embedding": [],
+    "semanticEmbeddings": []
   }
 ];
 
@@ -19183,5 +19207,6 @@ export const answerKey = {
   "q6": "c",
   "q7": "a",
   "q8": "a",
-  "q9": "c"
+  "q9": "c",
+  "attention-check-pretest": "c"
 };

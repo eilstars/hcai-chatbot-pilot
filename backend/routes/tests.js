@@ -181,6 +181,7 @@ const shuffleArray = (array) => {
 router.get('/full-results/:participantId/:testType', async (req, res) => {
     try {
         const { participantId, testType } = req.params;
+        const ATTENTION_CHECK_ID = 'attention-check-pretest';
 
         // Try the exact testType first, then fall back to common legacy variants
         // so participants who completed the pre-test under an older flow name are handled
@@ -198,13 +199,12 @@ router.get('/full-results/:participantId/:testType', async (req, res) => {
         }
 
         const orderedQuestionIds = Array.isArray(testResult.questionOrder)
-            ? testResult.questionOrder.filter((id) => questions.some((q) => q.id === id))
+            ? testResult.questionOrder.filter((id) => id !== ATTENTION_CHECK_ID && questions.some((q) => q.id === id))
             : [];
 
-        const orderedQuestions = [
-            ...orderedQuestionIds.map((id) => questions.find((q) => q.id === id)).filter(Boolean),
-            ...questions.filter((q) => !orderedQuestionIds.includes(q.id))
-        ];
+        const orderedQuestions = orderedQuestionIds
+            .map((id) => questions.find((q) => q.id === id))
+            .filter(Boolean);
 
         const fullResults = orderedQuestions.map(question => {
             const userAnswerId = testResult.answers[question.id];

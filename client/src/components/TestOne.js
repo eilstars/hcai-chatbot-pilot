@@ -117,6 +117,19 @@ const testQuestions = [
         answer: 'a',
         learningGoal: 'Explain how rational decisions are made by comparing marginal benefits',
         explanation: 'This identifies the marginal benefit (the specific change in utility/grade from the next unit of input) and weighs it against the marginal cost (the value of the next best alternative foregone).'
+    },
+    {
+        id: 'q9',
+        text: "You decide to leave your corporate job, where you earned $85,000 a year, to start your own independent software consultancy. In your first year, you brought in $210,000 in total revenue. Your business expenses (office rent, software licenses, and hardware) totaled $95,000. What is the consultancy's economic profit for the first year?",
+        options: {
+            a: '$210,000',
+            b: '$115,000',
+            c: '$30,000',
+            d: '$180,000'
+        },
+        answer: 'c',
+        learningGoal: 'Understand accounting vs economic profit',
+        explanation: 'Economic profit subtracts both explicit costs ($95,000) and implicit costs ($85,000) from total revenue.'
     }
 ];
 
@@ -131,7 +144,10 @@ const TestOne = ({ testType, nextProgress }) => {
             b: 'Orange',
             c: 'Green',
             d: 'Yellow'
-        }
+        },
+        answer: 'c',
+        learningGoal: 'Confirm attention during the learning session',
+        explanation: 'A dollar bill is green.'
     };
 
     const [randomizedQuestions] = useState(() => {

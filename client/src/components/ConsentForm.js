@@ -2,6 +2,7 @@ import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { UserContext } from '../context/UserContext';
 import Breadcrumb from './Breadcrumb';
+import consentFormPdf from '../Consent Form - Prolific Study.pdf';
 
 const styles = {
     page: {
@@ -102,7 +103,15 @@ const styles = {
     printNote: {
         fontSize: '0.85rem',
         color: '#666',
+        marginBottom: '0.75rem',
+    },
+    downloadLink: {
+        display: 'inline-block',
         marginBottom: '1.25rem',
+        fontSize: '0.9rem',
+        fontWeight: '600',
+        color: '#1d4ed8',
+        textDecoration: 'none',
     },
 };
 
@@ -288,6 +297,13 @@ const ConsentForm = () => {
             <p style={styles.printNote}>
                 Please print this consent form if you would like to retain a copy for your records.
             </p>
+            <a
+                href={consentFormPdf}
+                download="Consent Form - Prolific Study.pdf"
+                style={styles.downloadLink}
+            >
+                Download consent form (PDF)
+            </a>
 
             <div style={styles.checkboxGroup}>
                 <p style={styles.checkboxGroupTitle}>To proceed, please confirm all of the following:</p>
