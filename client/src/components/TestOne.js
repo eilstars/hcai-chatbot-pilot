@@ -211,9 +211,9 @@ const TestOne = ({ testType, nextProgress }) => {
                                         checked={answers[q.id] === key}
                                         onChange={() => handleChange(q.id, key)}
                                         required
-                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                                        className="w-4 h-4 text-blue-600 focus:ring-blue-500 text-left"
                                     />
-                                    <span className="text-sm text-gray-700 leading-relaxed">{value}</span>
+                                    <span className="text-left text-sm text-gray-700 leading-relaxed">{value}</span>
                                 </label>
                             ))}
                         </div>

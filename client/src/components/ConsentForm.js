@@ -6,13 +6,15 @@ import consentFormPdf from '../Consent Form - Prolific Study.pdf';
 
 const styles = {
     page: {
-        maxWidth: '760px',
-        margin: '0',
-        padding: '2rem 1.5rem 3rem',
+        width: '100%',
+        maxWidth: 'none',
+        margin: '0 auto',
+        padding: '2rem 4vw 3rem',
         textAlign: 'left',
         color: '#222',
         lineHeight: '1.7',
         fontSize: '0.95rem',
+        boxSizing: 'border-box',
     },
     institution: {
         fontSize: '0.85rem',

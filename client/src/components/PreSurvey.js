@@ -40,7 +40,7 @@ const PreSurvey = ({ nextProgress }) => {
     },
     {
       name: 'usageInSchool',
-      label: 'How often do you use AI chatbots for school work?',
+      label: 'How often do you use AI chatbots to learn?',
       options: [
         { value: 'almostAlways', label: 'Almost always' },
         { value: 'often', label: 'Often' },
@@ -60,7 +60,9 @@ const PreSurvey = ({ nextProgress }) => {
         { value: 'almostAlwaysReliable', label: 'Almost always reliable' },
       ],
     },
-    {
+  ];
+
+  const microeconomicsQuestion = {
       name: 'microeconomicsExperience',
       label: 'Which of the following best describes your experience with Microeconomics?',
       options: [
@@ -69,14 +71,13 @@ const PreSurvey = ({ nextProgress }) => {
         { value: 'someUnderstanding', label: 'I have some understanding of Microeconomics, but have not taken a formal course.' },
         { value: 'littleOrNoUnderstanding', label: 'I have little or no understanding of Microeconomics.' },
       ],
-    },
-  ];
+  };
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-10 font-sans">
       <Breadcrumb currentStep="pre-survey" />
 
-      <h1 className="text-2xl font-bold text-gray-800 mb-1">Survey on AI Chatbots</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-1">Questions on AI Chatbots</h1>
       <p className="text-sm text-gray-500 mb-6">
         We would like to start by understanding your opinion on chatbots and artificial intelligence.
         A chatbot is a computer program that simulates conversations with human users.
@@ -105,6 +106,34 @@ const PreSurvey = ({ nextProgress }) => {
             </select>
           </div>
         ))}
+
+        <div className="pt-3">
+          <h1 className="text-2xl font-bold text-gray-800 mb-1">Question on Prior Experience with Microeconomics</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            Please answer the following question about your background in microeconomics.
+          </p>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+            Question {questions.length + 1}
+          </p>
+          <label htmlFor={microeconomicsQuestion.name} className="block text-base font-semibold text-gray-800 mb-3 leading-snug">
+            {microeconomicsQuestion.label}
+          </label>
+          <select
+            id={microeconomicsQuestion.name}
+            name={microeconomicsQuestion.name}
+            onChange={handleChange}
+            required
+            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+          >
+            <option value="">Select an option</option>
+            {microeconomicsQuestion.options.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </div>
 
         <button
           type="submit"

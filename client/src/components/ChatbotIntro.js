@@ -25,11 +25,12 @@ const ChatbotIntro = ({ nextProgress }) => {
             <Breadcrumb currentStep="learning-1" />
             <h1 className="text-2xl font-bold text-gray-800 mb-1">Prepare for the learning session</h1>
             <div className="space-y-4 text-gray-700">
-                <p className="px-10 text-sm text-gray-500 mb-6"> You will now engage with an artificial intelligence (AI) tutor chatbot and revisit the questions you 
+                <p className="text-left px-10 pt-5 text-sm text-black font-semibold mb-6"> You will now engage with an artificial intelligence (AI) tutor chatbot and revisit the questions you 
                     just answered. Please take advantage of the chatbot as a learning tool to learn about the concepts 
                     behind the questions and revise your answers from the pretest if needed. You have 20 minutes to review 
                     all 9 questions. 
-                    <br/><br/>
+                </p>
+                <p className="text-left px-10 text-sm text-black mb-6">
                     The AI tutor chatbot can occasionally produce inaccurate, incomplete, or biased outputs, 
                     which may pose a risk if relied upon without human judgment. Although the research team has reviewed the 
                     chatbot’s performance on answering microeconomics-related questions and found it satisfactory, there 

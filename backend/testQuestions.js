@@ -17934,7 +17934,7 @@ export const questions = [
   },
   {
     "id": "q7",
-    "text": "If you consume pasta every day of the week, the marginal utility of pasta is likely to ________ at the end of the week, ceteris paribus, and this demonstrates the law of ________. ",
+    "text": "If you consume pasta every day of the week, the marginal utility of pasta is likely to ________ at the end of the week, with all other factors remaining the same. This demonstrates the law of ________. ",
     "options": {
       "a": "decline; diminishing marginal utility",
       "b": "increase; increasing marginal utility",

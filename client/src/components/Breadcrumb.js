@@ -4,10 +4,10 @@ const Breadcrumb = ({ currentStep }) => {
   // Define all steps in the study flow
     const steps = [
         { id: 'consent', label: 'Consent' },
-        { id: 'pre-survey', label: 'Survey on AI' },
+        { id: 'pre-survey', label: 'Pre-Survey' },
         { id: 'pretest', label: 'Pre-Test' },
         { id: 'learning-1', label: 'Learning Session' },
-        { id: 'post-survey', label: 'Post Survey' },
+        { id: 'post-survey', label: 'Post-Survey' },
         { id: 'demographics', label: 'Demographics Survey' }
     ];
 

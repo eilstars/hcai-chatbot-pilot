@@ -70,7 +70,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
 
     // Get current conversation or start a new one for this specific question
     const currentMessages = chatHistories[currentQId] || [
-        { role: 'system', content: `I am an AI tutor to help you with microeconomics. Ask me anything about this question to prepare for your post-test.` }
+        { role: 'system', content: `I am an AI tutor to help you with microeconomics. Ask me anything about this question to better understand the learning goal.` }
     ];
 
     const handleSend = async () => {
