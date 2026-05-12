@@ -21,12 +21,13 @@ router.post('/login', async (req, res) => {
 
       // --- Start of The Fix ---
       // Manually create the object to send back to the frontend
-      // This ensures the default 'consent' progress is included.
+      // Include the generated `completionCode` so the client can display it.
       const userResponse = {
         _id: user._id,
         participantId: user.participantId,
         group: user.group,
-        progress: 'consent' // Explicitly set the starting progress
+        progress: 'consent', // Explicitly set the starting progress
+        completionCode: user.completionCode
       };
       return res.status(201).json(userResponse);
       // --- End of The Fix ---

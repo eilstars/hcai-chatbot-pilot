@@ -27,11 +27,11 @@ const PostStudySurvey = ({ nextProgress }) => {
     };
 
     const likertOptions = [
-        { value: '1', label: '1 - Not accurate at all' },
-        { value: '2', label: '2' },
-        { value: '3', label: '3' },
-        { value: '4', label: '4' },
-        { value: '5', label: '5 - Extremely accurate' }
+        { value: '1', label: '1 - Strongly disagree' },
+        { value: '2', label: '2 - Disagree' },
+        { value: '3', label: '3 - Neither Agree nor Disagree' },
+        { value: '4', label: '4 - Agree' },
+        { value: '5', label: '5 - Strongly Agree' }
     ];
 
     const questions = [
@@ -63,7 +63,7 @@ const PostStudySurvey = ({ nextProgress }) => {
 
             <h1 className="text-2xl font-bold text-gray-800 mb-1">Post-Survey</h1>
             <p className="text-sm text-gray-500 mb-6">
-                On a scale of 1-5, rate how accurate the following statements are.
+                On a scale of 1-5, rate your agreement with the following statements.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">

@@ -37,6 +37,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
     const [nudgedMessage, setNudgedMessage] = useState(null); // Store message that triggered nudge
     const [learningQuestions, setLearningQuestions] = useState([]);
     const chatEndRef = useRef(null);
+    const questionsPanelRef = useRef(null);
 
     useEffect(() => {
         if (preTestResults.length > 0) {
@@ -49,8 +50,14 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
 
     // Auto-scroll the chat window when new messages arrive or question changes
     useEffect(() => {
+        window.scrollTo(0, 0);
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chatHistories, currentQuestionIndex]);
+
+    // Scroll questions panel to top when question changes
+    useEffect(() => {
+        questionsPanelRef.current?.scrollTo(0, 0);
+    }, [currentQuestionIndex]);
 
     // Session Timer logic
     useEffect(() => {
@@ -279,7 +286,7 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                 
                 {/* LEFT COLUMN: Question & History */}
                 <div className="flex flex-col min-h-0">
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col overflow-y-auto">
+                    <div ref={questionsPanelRef} className="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 flex-1 flex flex-col overflow-y-auto">
                         {/* <div className="bg-blue-50 text-blue-700 text-[12px] font-black px-3 py-1 rounded-full w-fit mb-4 border border-blue-100">
                             Goal: {currentQuestion.learningGoal}
                         </div> */}

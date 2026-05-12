@@ -153,7 +153,12 @@ const TestOne = ({ testType, nextProgress }) => {
     const [randomizedQuestions] = useState(() => {
         const baseQuestions = shuffleArray(testQuestions);
         if (testType === 'pretest') {
-            return [...baseQuestions, attentionCheckQuestion];
+            const mid = Math.floor(baseQuestions.length / 2);
+            return [
+                ...baseQuestions.slice(0, mid),
+                attentionCheckQuestion,
+                ...baseQuestions.slice(mid)
+            ];
         }
         return baseQuestions;
     });

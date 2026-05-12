@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { UserContext } from '../context/UserContext';
 
 // Import all components
@@ -14,6 +14,11 @@ import StudyComplete from './StudyComplete';
 
 const MainStudyComponent = () => {
   const { user } = useContext(UserContext);
+
+  // Scroll to top when user progress changes
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [user?.progress]);
 
   if (!user) {
     return <ParticipantLogin />;
