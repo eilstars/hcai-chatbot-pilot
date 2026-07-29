@@ -21,9 +21,24 @@ app.use(express.json());
 
 // --- Database Connection ---
 const mongoURI = process.env.MONGO_URI;
-mongoose.connect(mongoURI)
-.then(() => console.log("MongoDB successfully connected"))
-.catch(err => console.error("MongoDB connection error:", err));
+
+async function startServer() {
+	try {
+		if (!mongoURI) {
+			throw new Error('Missing MongoDB connection string. Set MONGO_URI.');
+		}
+
+		await mongoose.connect(mongoURI);
+		console.log('MongoDB successfully connected');
+
+		// --- Server Listener ---
+		const PORT = process.env.PORT || 5000;
+		app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+	} catch (err) {
+		console.error('MongoDB connection error:', err);
+		process.exit(1);
+	}
+}
 
 // --- API Routes ---
 app.use('/api/users', usersRouter);
@@ -40,6 +55,4 @@ if (process.env.NODE_ENV === 'production') {
 	});
 }
 
-// --- Server Listener ---
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+startServer();

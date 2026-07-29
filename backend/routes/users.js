@@ -45,7 +45,11 @@ router.post('/login', async (req, res) => {
     res.status(200).json(user);
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ msg: 'Server error' });
+    res.status(500).json({
+      msg: 'Server error',
+      error: error.message,
+      code: error.code,
+    });
   }
 });
 
@@ -68,7 +72,11 @@ router.post('/update-progress', async (req, res) => {
         res.json(user);
     } catch (error) {
         console.error('Progress update error:', error);
-        res.status(500).json({ msg: 'Server error' });
+        res.status(500).json({
+          msg: 'Server error',
+          error: error.message,
+          code: error.code,
+        });
     }
 });
 
