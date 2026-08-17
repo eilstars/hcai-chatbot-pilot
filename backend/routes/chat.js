@@ -119,7 +119,7 @@ async function hydratePromptTextOnLatestUserLog({ participantId, round, currentQ
 // 1. Judge if input is standalone
 async function judgeIfInputIsStandalone(message, chatHistory) {
     if (chatHistory.length === 0) return true; // No history, so it must be standalone
-    
+
     const prompt = `
         Analyze the "User Message" in the context of the "Chat History".
         Does the "User Message" make complete sense on its own, or is it a short follow-up (like "yes", "why?", "can you answer it") that depends on the previous turn?
@@ -130,9 +130,9 @@ async function judgeIfInputIsStandalone(message, chatHistory) {
 
         User Message: "${message}"
     `;
-    
+
     const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [{ "role": "system", "content": prompt }],
         max_tokens: 2
     });
@@ -156,7 +156,7 @@ async function addContextToInput(message, chatHistory) {
 
         Rewritten Standalone Question:
     `;
-    
+
     const completion = await openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [{ "role": "system", "content": prompt }],
@@ -225,7 +225,7 @@ Respond with ONLY "YES" or "NO".
 
     try {
         const completion = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-4o',
             messages: [{ role: 'system', content: prompt }],
             max_tokens: 5
         });
@@ -433,7 +433,7 @@ router.post('/message', async (req, res) => {
         let interventionScore = null;
         let semanticMatchedBankEntry = null;
         const interventionMessage = originalMessage;
-        
+
         // Find the specific question the user is working on
         const currentQuestionObj = questions.find(q => q.id === currentQuestionId);
 
@@ -441,7 +441,7 @@ router.post('/message', async (req, res) => {
             // Check 1: Verbatim (Targeted)
             // Compare against the full text of the CURRENT question (which includes options)
             const similarity = stringSimilarity.compareTwoStrings(interventionMessage.toLowerCase(), currentQuestionObj.text.toLowerCase());
-            
+
             if (similarity > 0.95) { // High threshold for full text match
                 interventionType = "verbatim";
                 interventionScore = similarity;
@@ -510,7 +510,7 @@ router.post('/message', async (req, res) => {
         }
 
         // --- 3. Handle Final Response ---
-        
+
         if (round === 1 && (interventionType === 'verbatim' || interventionType === 'semantic')) {
             await User.updateOne({ _id: user._id }, { $inc: { interventions_round1: 1 } });
         } else if (round === 2 && (interventionType === 'verbatim' || interventionType === 'semantic')) {
@@ -576,7 +576,7 @@ router.post('/message', async (req, res) => {
 // --- Evaluation Function: Check if a question reveals the answer ---
 async function evaluateIfQuestionRevealsAnswer(studentQuestion, multipleChoiceQuestionContext, correctAnswerKey, options) {
     if (!studentQuestion || !multipleChoiceQuestionContext) return null;
-    
+
     // Build the options text for the prompt
     let optionsText = "";
     if (options && typeof options === 'object') {
@@ -584,7 +584,7 @@ async function evaluateIfQuestionRevealsAnswer(studentQuestion, multipleChoiceQu
             .map(([key, value]) => `${key}. ${value}`)
             .join('\n');
     }
-    
+
     const prompt = `
 You are an expert educational evaluator determining if a student's message is a direct answer-seeking attempt.
 
@@ -638,11 +638,11 @@ router.post('/log-message', async (req, res) => {
             rewrittenMessage,
             effectiveMessage
         } = req.body;
-        
+
         console.log(`[LOG-MESSAGE] Received: sender=${sender}, qId=${currentQuestionId}, msg_len=${message?.length}`);
-        
+
         let questionRevealsAnswer = null;
-        
+
         // Only evaluate if this is a user message with question context
         if (sender === 'user' && currentQuestionId && questionContext) {
             console.log(`[EVAL] Evaluating message for Q${currentQuestionId}:`, message.substring(0, 50));
@@ -663,7 +663,7 @@ router.post('/log-message', async (req, res) => {
         } else {
             console.log(`[EVAL] Skipping evaluation: sender=${sender}, qId=${currentQuestionId}, hasContext=${!!questionContext}`);
         }
-        
+
         const normalizedPromptText =
             (typeof promptText === 'string' && promptText.trim().length > 0)
                 ? promptText
@@ -754,11 +754,11 @@ router.post('/log-message', async (req, res) => {
         if (sender === 'user' && finalPromptText && cachedPromptText) {
             promptTextCache.delete(cacheKey);
         }
-        
+
         console.log(`[LOG-MESSAGE] Saving message with interventionType=${effectiveInterventionType}, interventionScore=${effectiveInterventionScore}`);
         const savedMessage = await newMessage.save();
         console.log(`[LOG-MESSAGE] Saved successfully:`, savedMessage._id);
-        
+
         res.status(201).json({ msg: 'Message logged successfully.', questionRevealsAnswer, messageId: savedMessage._id });
     } catch (error) {
         console.error("Error logging message:", error);
@@ -788,16 +788,16 @@ router.post('/nudge-action', async (req, res) => {
     try {
         const { participantId, round, currentQuestionId, action } = req.body;
         // action is 'ask-anyway' or 'ask-else'
-        
+
         console.log(`[NUDGE] Action '${action}' for Q${currentQuestionId} by participant ${participantId}`);
-        
+
         let response = '';
         if (action === 'ask-anyway') {
             response = 'Okay! Go ahead and ask your question. I\'ll do my best to help you understand the concept.';
         } else if (action === 'ask-else') {
             response = 'Good thinking! Let\'s explore another angle. What aspect of the topic would you like to understand better?';
         }
-        
+
         res.status(200).json({ msg: 'Nudge action recorded', response });
     } catch (error) {
         console.error('Error handling nudge action:', error);
