@@ -158,7 +158,7 @@ async function addContextToInput(message, chatHistory) {
     `;
 
     const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: 'gpt-4o',
         messages: [{ "role": "system", "content": prompt }],
         max_tokens: 150
     });
@@ -373,7 +373,7 @@ router.post('/message', async (req, res) => {
             const standaloneMessages = [{ role: 'system', content: standalonePrompt }];
             trackPrompt({ stage: 'judgeIfInputIsStandalone', model: 'gpt-3.5-turbo', messages: standaloneMessages, max_tokens: 2 });
             const standaloneCompletion = await openai.chat.completions.create({
-                model: 'gpt-3.5-turbo',
+                model: 'gpt-4o',
                 messages: standaloneMessages,
                 max_tokens: 2
             });
@@ -399,7 +399,7 @@ router.post('/message', async (req, res) => {
                 const rewriteMessages = [{ role: 'system', content: rewritePrompt }];
                 trackPrompt({ stage: 'addContextToInput', model: 'gpt-3.5-turbo', messages: rewriteMessages, max_tokens: 150 });
                 const rewriteCompletion = await openai.chat.completions.create({
-                    model: 'gpt-3.5-turbo',
+                    model: 'gpt-4o',
                     messages: rewriteMessages,
                     max_tokens: 150
                 });
@@ -481,7 +481,7 @@ router.post('/message', async (req, res) => {
                     const topicCheck = await isMessageRelatedToTopic(interventionMessage, currentQuestionObj);
                     trackPrompt({
                         stage: 'topicRelatednessCheck',
-                        model: 'gpt-3.5-turbo',
+                        model: 'gpt-4o',
                         messages: [{
                             role: 'system',
                             content: `questionId=${currentQuestionObj.id}; reason=${topicCheck.reason}`
@@ -606,7 +606,7 @@ Respond with ONLY "YES" if the student's question is directly seeking or attempt
 
     try {
         const completion = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: 'gpt-4o',
             messages: [{ role: "user", content: prompt }],
             max_tokens: 5
         });
