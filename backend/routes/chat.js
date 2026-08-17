@@ -371,7 +371,7 @@ router.post('/message', async (req, res) => {
         User Message: "${originalMessage}"
     `;
             const standaloneMessages = [{ role: 'system', content: standalonePrompt }];
-            trackPrompt({ stage: 'judgeIfInputIsStandalone', model: 'gpt-3.5-turbo', messages: standaloneMessages, max_tokens: 2 });
+            trackPrompt({ stage: 'judgeIfInputIsStandalone', model: 'gpt-4o', messages: standaloneMessages, max_tokens: 2 });
             const standaloneCompletion = await openai.chat.completions.create({
                 model: 'gpt-4o',
                 messages: standaloneMessages,
@@ -397,7 +397,7 @@ router.post('/message', async (req, res) => {
         Rewritten Standalone Question:
     `;
                 const rewriteMessages = [{ role: 'system', content: rewritePrompt }];
-                trackPrompt({ stage: 'addContextToInput', model: 'gpt-3.5-turbo', messages: rewriteMessages, max_tokens: 150 });
+                trackPrompt({ stage: 'addContextToInput', model: 'gpt-4o', messages: rewriteMessages, max_tokens: 150 });
                 const rewriteCompletion = await openai.chat.completions.create({
                     model: 'gpt-4o',
                     messages: rewriteMessages,
