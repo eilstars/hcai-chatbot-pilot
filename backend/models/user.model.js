@@ -11,7 +11,9 @@ const UserSchema = new Schema({
     type: Object,
     of: Number,
     default: {}
-  }
+  },
+  interventions_round1: { type: Number, default: 0 },
+  suboptimal_questions_round2: { type: Number, default: 0 }
 }, { timestamps: true });
 
 function generateRandomString(length) {

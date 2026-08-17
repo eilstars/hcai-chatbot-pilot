@@ -348,7 +348,9 @@ router.post('/message', async (req, res) => {
         const originalMessage = (message || '').trim();
         const likelyContextDependent = isLikelyContextDependent(originalMessage);
         let effectiveMessage = originalMessage;
-        let rewrittenMessage = '';
+        let rewrittenMessage = null;
+        let isStandalone = true;
+        let wasRewritten = false;
 
         trackPrompt({
             stage: 'deterministicContextGate',
@@ -376,14 +378,14 @@ router.post('/message', async (req, res) => {
                 max_tokens: 2
             });
             promptTrace[promptTrace.length - 1].output = standaloneCompletion.choices[0].message.content;
-            const isStandalone = standaloneCompletion.choices[0].message.content.includes('YES');
+            isStandalone = standaloneCompletion.choices[0].message.content.includes('YES');
 
             if (!isStandalone) {
-            const historyString = (chatHistory || [])
-                .map(m => `${(m.role || m.sender) === 'user' ? 'User' : 'Assistant'}: ${m.content || m.text}`)
-                .join('\n');
+                const historyString = (chatHistory || [])
+                    .map(m => `${(m.role || m.sender) === 'user' ? 'User' : 'Assistant'}: ${m.content || m.text}`)
+                    .join('\n');
 
-            const rewritePrompt = `
+                const rewritePrompt = `
         The user has sent a short follow-up message that doesn't make sense on its own.
         Please rewrite the user's "New Message" into a complete, standalone question by adding context from the "Chat History".
         
@@ -394,31 +396,33 @@ router.post('/message', async (req, res) => {
 
         Rewritten Standalone Question:
     `;
-            const rewriteMessages = [{ role: 'system', content: rewritePrompt }];
-            trackPrompt({ stage: 'addContextToInput', model: 'gpt-3.5-turbo', messages: rewriteMessages, max_tokens: 150 });
-            const rewriteCompletion = await openai.chat.completions.create({
-                model: 'gpt-3.5-turbo',
-                messages: rewriteMessages,
-                max_tokens: 150
-            });
-            promptTrace[promptTrace.length - 1].output = rewriteCompletion.choices[0].message.content;
-            rewrittenMessage = rewriteCompletion.choices[0].message.content.trim();
+                const rewriteMessages = [{ role: 'system', content: rewritePrompt }];
+                trackPrompt({ stage: 'addContextToInput', model: 'gpt-3.5-turbo', messages: rewriteMessages, max_tokens: 150 });
+                const rewriteCompletion = await openai.chat.completions.create({
+                    model: 'gpt-3.5-turbo',
+                    messages: rewriteMessages,
+                    max_tokens: 150
+                });
+                promptTrace[promptTrace.length - 1].output = rewriteCompletion.choices[0].message.content;
+                const rawRewritten = rewriteCompletion.choices[0].message.content.trim();
 
-            const rewritePreservedIntent = isRewriteIntentPreserved(originalMessage, rewrittenMessage);
-            trackPrompt({
-                stage: 'rewriteIntentValidation',
-                model: 'rule-based',
-                messages: [{ role: 'system', content: `original="${originalMessage}"\nrewritten="${rewrittenMessage}"` }]
-            });
-            promptTrace[promptTrace.length - 1].output = rewritePreservedIntent ? 'PASSED' : 'FAILED';
+                const rewritePreservedIntent = isRewriteIntentPreserved(originalMessage, rawRewritten);
+                trackPrompt({
+                    stage: 'rewriteIntentValidation',
+                    model: 'rule-based',
+                    messages: [{ role: 'system', content: `original="${originalMessage}"\nrewritten="${rawRewritten}"` }]
+                });
+                promptTrace[promptTrace.length - 1].output = rewritePreservedIntent ? 'PASSED' : 'FAILED';
 
-            if (rewritePreservedIntent) {
-                effectiveMessage = rewrittenMessage;
-                console.log(`Context added. Original: "${originalMessage}", Effective: "${effectiveMessage}"`);
-            } else {
-                effectiveMessage = originalMessage;
-                console.log(`Rewrite discarded due to intent drift. Original kept: "${originalMessage}"`);
-            }
+                if (rewritePreservedIntent) {
+                    rewrittenMessage = rawRewritten;
+                    wasRewritten = true;
+                    effectiveMessage = rawRewritten;
+                    console.log(`Context added. Original: "${originalMessage}", Effective: "${effectiveMessage}"`);
+                } else {
+                    effectiveMessage = originalMessage;
+                    console.log(`Rewrite discarded due to intent drift. Original kept: "${originalMessage}"`);
+                }
             }
         }
 
@@ -472,7 +476,6 @@ router.post('/message', async (req, res) => {
                 if (highestScore > 0.75) {
                     interventionType = "semantic";
                     interventionScore = highestScore;
-                    // No behavior intervention: all users receive the standard tutor response.
                 } else {
                     // Check 3: Off-Topic (LLM topic-relatedness)
                     const topicCheck = await isMessageRelatedToTopic(interventionMessage, currentQuestionObj);
@@ -491,6 +494,19 @@ router.post('/message', async (req, res) => {
                     }
                 }
             }
+
+            // Evaluate if question directly seeks answer choice
+            if (currentQuestionObj.answer && currentQuestionObj.options) {
+                const questionReveals = await evaluateIfQuestionRevealsAnswer(
+                    interventionMessage,
+                    currentQuestionObj.text,
+                    currentQuestionObj.answer,
+                    currentQuestionObj.options
+                );
+                if (questionReveals === true && interventionType !== 'verbatim') {
+                    interventionType = 'semantic';
+                }
+            }
         }
 
         // --- 3. Handle Final Response ---
@@ -502,7 +518,12 @@ router.post('/message', async (req, res) => {
         }
 
         if (!botReplyText) {
-            const formattedHistory = (chatHistory || []).map(msg => ({ role: (msg.role || msg.sender) === 'user' ? 'user' : 'assistant', content: msg.content || msg.text }));
+            const formattedHistory = (chatHistory || [])
+                .filter(msg => msg.role !== 'system' && msg.sender !== 'system')
+                .map(msg => ({
+                    role: (msg.role || msg.sender) === 'user' ? 'user' : 'assistant',
+                    content: msg.content || msg.text || ''
+                }));
             const tutorMessages = [
                 { role: 'system', content: systemMessage },
                 ...formattedHistory,
@@ -535,12 +556,20 @@ router.post('/message', async (req, res) => {
             interventionType,
             interventionScore,
             semanticMatchedBankEntry,
-            promptText: responsePromptText
+            promptText: responsePromptText,
+            isStandalone,
+            wasRewritten,
+            rewrittenMessage,
+            effectiveMessage
         });
 
     } catch (error) {
         console.error('Chat error:', error);
-        res.status(500).json({ msg: 'Server Error' });
+        const isQuotaError = error?.code === 'credit_balance_exhausted' || error?.status === 429;
+        const errorMsg = isQuotaError
+            ? 'OpenAI API quota exceeded (credit balance exhausted). Please update your API key or billing in backend/.env.'
+            : (error?.message || 'Server Error');
+        res.status(500).json({ msg: errorMsg, code: error?.code });
     }
 });
 
@@ -557,22 +586,23 @@ async function evaluateIfQuestionRevealsAnswer(studentQuestion, multipleChoiceQu
     }
     
     const prompt = `
-A student is learning to answer a multiple choice question.
-The student has asked you the following question:
+You are an expert educational evaluator determining if a student's message is a direct answer-seeking attempt.
 
-"${studentQuestion}"
-
-The multiple choice question they are learning is:
+Multiple Choice Question Context:
 ${multipleChoiceQuestionContext}
 
 Options:
 ${optionsText}
 
-The correct answer is option: ${correctAnswerKey}
+Correct Answer Choice: Option ${correctAnswerKey}
 
-Will answering the student's question directly tell them the correct answer (by name or inference), or will it logically eliminate wrong choices and lead them to the correct answer?
+Student Question: "${studentQuestion}"
 
-Respond with ONLY "Yes" if answering their question would reveal or strongly imply the correct answer, or "No" if it would not.`;
+Determine if the student's question is directly asking for the correct answer choice (e.g., asking "is it A?", "which option is correct?", "give me the answer"), or asking to confirm/select the right option.
+
+CRITICAL RULE: General conceptual questions asking to explain concepts or definitions (e.g., "what is scarcity?", "how does opportunity cost work?", "can you explain diminished utility?") are NOT answer-seeking attempts.
+
+Respond with ONLY "YES" if the student's question is directly seeking or attempting to extract the correct option letter/choice. Otherwise, respond with ONLY "NO".`;
 
     try {
         const completion = await openai.chat.completions.create({
@@ -581,17 +611,33 @@ Respond with ONLY "Yes" if answering their question would reveal or strongly imp
             max_tokens: 5
         });
         const result = completion.choices[0].message.content.trim().toUpperCase();
-        return result.includes('YES') ? true : false;
+        return result.includes('YES');
     } catch (error) {
         console.error("Error evaluating if question reveals answer:", error);
         return null;
     }
 }
 
-// ... (log-message route is unchanged) ...
+// --- Route: Log a Chat Message ---
 router.post('/log-message', async (req, res) => {
     try {
-        const { participantId, round, sender, message, currentQuestionId, questionContext, interventionType, interventionScore, semanticMatchedBankEntry, promptText, promptTrace } = req.body;
+        const {
+            participantId,
+            round,
+            sender,
+            message,
+            currentQuestionId,
+            questionContext,
+            interventionType,
+            interventionScore,
+            semanticMatchedBankEntry,
+            promptText,
+            promptTrace,
+            isStandalone,
+            wasRewritten,
+            rewrittenMessage,
+            effectiveMessage
+        } = req.body;
         
         console.log(`[LOG-MESSAGE] Received: sender=${sender}, qId=${currentQuestionId}, msg_len=${message?.length}`);
         
@@ -601,7 +647,7 @@ router.post('/log-message', async (req, res) => {
         if (sender === 'user' && currentQuestionId && questionContext) {
             console.log(`[EVAL] Evaluating message for Q${currentQuestionId}:`, message.substring(0, 50));
             // Find the question in the question bank to get the correct answer
-            const question = questions.find(q => q.id === currentQuestionId);
+            const question = questions.find(q => q.id === String(currentQuestionId));
             if (question && question.answer && question.options) {
                 console.log(`[EVAL] Found question, correct answer: ${question.answer}`);
                 questionRevealsAnswer = await evaluateIfQuestionRevealsAnswer(
@@ -623,19 +669,25 @@ router.post('/log-message', async (req, res) => {
                 ? promptText
                 : formatPromptTraceAsText(promptTrace);
 
-        const effectiveInterventionType =
-            (sender !== 'user')
-                ? 'none'
-                : ((questionRevealsAnswer === true)
-                    ? 'semantic'
-                    : (interventionType || 'none'));
+        // Retain verbatim if originally verbatim. Do NOT overwrite verbatim with semantic.
+        let effectiveInterventionType = 'none';
+        if (sender === 'user') {
+            if (interventionType === 'verbatim') {
+                effectiveInterventionType = 'verbatim';
+            } else if (questionRevealsAnswer === true) {
+                effectiveInterventionType = 'semantic';
+            } else {
+                effectiveInterventionType = interventionType || 'none';
+            }
+        }
 
-        const effectiveInterventionScore =
-            (sender !== 'user')
-                ? null
-                : ((questionRevealsAnswer === true)
-                    ? (interventionScore ?? 1)
-                    : (interventionScore || null));
+        // Preserve actual numerical similarity score. Never default to hardcoded 1.
+        let effectiveInterventionScore = null;
+        if (sender === 'user') {
+            if (typeof interventionScore === 'number' && !isNaN(interventionScore)) {
+                effectiveInterventionScore = interventionScore;
+            }
+        }
 
         const effectiveSemanticMatchedBankEntry =
             (sender === 'user' && typeof semanticMatchedBankEntry === 'string' && semanticMatchedBankEntry.trim().length > 0)
@@ -687,12 +739,16 @@ router.post('/log-message', async (req, res) => {
             sender,
             message,
             promptText: finalPromptText,
-            currentQuestionId: currentQuestionId || undefined,
+            currentQuestionId: currentQuestionId ? String(currentQuestionId) : undefined,
             wasIntervention: effectiveInterventionType !== 'none',
             interventionType: effectiveInterventionType,
             interventionScore: effectiveInterventionScore,
             semanticMatchedBankEntry: resolvedSemanticMatchedBankEntry,
-            questionRevealsAnswer
+            questionRevealsAnswer,
+            isStandalone: typeof isStandalone === 'boolean' ? isStandalone : true,
+            wasRewritten: typeof wasRewritten === 'boolean' ? wasRewritten : false,
+            rewrittenMessage: rewrittenMessage || null,
+            effectiveMessage: effectiveMessage || message
         });
 
         if (sender === 'user' && finalPromptText && cachedPromptText) {
@@ -707,6 +763,23 @@ router.post('/log-message', async (req, res) => {
     } catch (error) {
         console.error("Error logging message:", error);
         res.status(500).json({ msg: 'Server Error', error: error.message });
+    }
+});
+
+// --- Route: Fetch isolated Chat History per question ---
+router.get('/history/:participantId/:round/:currentQuestionId', async (req, res) => {
+    try {
+        const { participantId, round, currentQuestionId } = req.params;
+        const messages = await ChatMessage.find({
+            participantId,
+            round: Number(round),
+            currentQuestionId: String(currentQuestionId)
+        }).sort({ createdAt: 1 });
+
+        res.json({ messages });
+    } catch (error) {
+        console.error("Error fetching chat history per question:", error);
+        res.status(500).json({ msg: 'Server Error' });
     }
 });
 

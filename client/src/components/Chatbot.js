@@ -46,7 +46,30 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
     }, [preTestResults]);
 
     const currentQuestion = learningQuestions[currentQuestionIndex] || {};
-    const currentQId = currentQuestion.id || currentQuestionIndex;
+    const currentQId = currentQuestion?.id ? String(currentQuestion.id) : String(currentQuestionIndex);
+
+    // Fetch question-specific chat history when currentQId changes
+    useEffect(() => {
+        if (!participantId || !currentQId) return;
+        const fetchQuestionHistory = async () => {
+            try {
+                const res = await axios.get(`/api/chat/history/${participantId}/${round}/${currentQId}`);
+                if (Array.isArray(res.data.messages) && res.data.messages.length > 0) {
+                    const loaded = res.data.messages.map(m => ({
+                        role: m.sender === 'user' ? 'user' : (m.sender === 'bot' ? 'bot' : 'system'),
+                        content: m.message
+                    }));
+                    setChatHistories(prev => ({
+                        ...prev,
+                        [currentQId]: loaded
+                    }));
+                }
+            } catch (err) {
+                console.error("Error fetching question chat history:", err);
+            }
+        };
+        fetchQuestionHistory();
+    }, [participantId, round, currentQId]);
 
     // Auto-scroll the chat window when new messages arrive or question changes
     useEffect(() => {
@@ -101,18 +124,22 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                 chatHistory: currentMessages
             });
 
-            // Extract the reply from your backend response structure
+            // Extract the reply and tracking metrics from backend response
             const botReplyText = response.data.message || response.data.reply;
             const interventionType = response.data.interventionType || 'none';
             const interventionScore = response.data.interventionScore || null;
             const semanticMatchedBankEntry = response.data.semanticMatchedBankEntry || null;
+            const isStandalone = response.data.isStandalone;
+            const wasRewritten = response.data.wasRewritten;
+            const rewrittenMessage = response.data.rewrittenMessage;
+            const effectiveMessage = response.data.effectiveMessage;
             const promptText =
                 typeof response.data.promptText === 'string' && response.data.promptText.trim().length > 0
                     ? response.data.promptText
                     : formatPromptTraceAsText(response.data.promptTrace);
             const botReply = { role: 'bot', content: botReplyText };
 
-            // Log the user message after prompt generation so we can persist exact prompts used.
+            // Log the user message with tracking metadata
             try {
                 await axios.post('/api/chat/log-message', {
                     participantId,
@@ -124,7 +151,11 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                     interventionType,
                     interventionScore,
                     semanticMatchedBankEntry,
-                    promptText
+                    promptText,
+                    isStandalone,
+                    wasRewritten,
+                    rewrittenMessage,
+                    effectiveMessage
                 });
             } catch (e) {
                 console.error("User message log error:", e);

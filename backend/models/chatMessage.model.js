@@ -17,6 +17,10 @@ const ChatMessageSchema = new Schema({
   interventionScore: { type: Number, default: null, sparse: true },
   semanticMatchedBankEntry: { type: String, default: null },
   questionRevealsAnswer: { type: Boolean, default: null, sparse: true },
+  isStandalone: { type: Boolean, default: true },
+  wasRewritten: { type: Boolean, default: false },
+  rewrittenMessage: { type: String, default: null },
+  effectiveMessage: { type: String, default: null },
 }, { timestamps: true });
 
 export default mongoose.model('ChatMessage', ChatMessageSchema);

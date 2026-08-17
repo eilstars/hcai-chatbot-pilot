@@ -178,12 +178,11 @@ const ConsentForm = () => {
             <div style={styles.section}>
                 <h2 style={styles.sectionHeading}>What Procedures Are Involved?</h2>
                 <p style={styles.paragraph}>
-                    Participating in this study will first involve answering 8 multiple-choice questions on
-                    microeconomics. Next, you will be asked to work on the same 8 problems again and understand the
+                    Participating in this study will first involve answering 9 multiple-choice questions on
+                    microeconomics. Next, you will be asked to work on the same 9 problems again and understand the
                     concepts behind them. You will have access to a regular state-of-the-art generative chatbot (similar
                     to ChatGPT) in the process. You will receive feedback upon submitting each problem. Finally, you
-                    will answer a few demographic questions. Lastly, you will receive a completion code in the
-                    survey and be asked to paste it into the Prolific task page.
+                    will answer a few demographic questions.
                 </p>
             </div>
 
