@@ -126,10 +126,12 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
 
             // Extract the reply and tracking metrics from backend response
             const botReplyText = response.data.message || response.data.reply;
-            const interventionType = response.data.interventionType || 'none';
-            const interventionScore = response.data.interventionScore || null;
+            const threeStepLogic = response.data.threeStepLogic || response.data.interventionType || 'none';
+            const semanticScore = response.data.semanticScore ?? response.data.interventionScore ?? null;
+            const questionRevealsAnswer = response.data.questionRevealsAnswer ?? null;
             const semanticMatchedBankEntry = response.data.semanticMatchedBankEntry || null;
-            const isStandalone = response.data.isStandalone;
+            const isStandalone = response.data.isStandalone ?? response.data.questionStandalone ?? true;
+            const questionStandalone = isStandalone;
             const wasRewritten = response.data.wasRewritten;
             const rewrittenMessage = response.data.rewrittenMessage;
             const effectiveMessage = response.data.effectiveMessage;
@@ -148,11 +150,15 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                     message: userMsg,
                     currentQuestionId: currentQId,
                     questionContext: currentQuestion.text,
-                    interventionType,
-                    interventionScore,
+                    threeStepLogic,
+                    semanticScore,
+                    questionRevealsAnswer,
+                    interventionType: threeStepLogic,
+                    interventionScore: semanticScore,
                     semanticMatchedBankEntry,
                     promptText,
                     isStandalone,
+                    questionStandalone,
                     wasRewritten,
                     rewrittenMessage,
                     effectiveMessage

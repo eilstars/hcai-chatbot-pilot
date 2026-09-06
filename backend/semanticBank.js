@@ -46,5 +46,70 @@ export const semanticBank = {
         "Is this the right answer: You have $30. Your friend invites you to go bowling with them. Although the experience itself costs $15, you value it at $35. You also have the option to go to dinner alone. The meal usually costs $40, but you can go for only $20. What is the opportunity cost of going to dinner? The $40 value of the dinner.",
         "Is this the right answer: You have $30. Your friend invites you to go bowling with them. Although the experience itself costs $15, you value it at $35. You also have the option to go to dinner alone. The meal usually costs $40, but you can go for only $20. What is the opportunity cost of going to dinner? The $35 value of going bowling with friends.",
         "Is this the right answer: You have $30. Your friend invites you to go bowling with them. Although the experience itself costs $15, you value it at $35. You also have the option to go to dinner alone. The meal usually costs $40, but you can go for only $20. What is the opportunity cost of going to dinner? The $5 difference between the value of dinner and bowling."
+    ],
+    q5: [
+        "A town installs streetlights on main roads and no one can be stopped from benefiting from them. What kind of good is this?",
+        "What type of good is described when a town installs bright streetlights along main roads that benefit everyone?",
+        "Streetlights are installed and everyone benefits from the light. Is this a public or private good?",
+        "Based on non-excludability and non-rivalry, what type of good are streetlights?",
+        "A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, what kind of good is it?",
+        "A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, the streetlight service is best described as: public good, because the town had to pay for them. public good, because everyone benefits from the lights. private good, because only the people living in that specific town can use them. private good, because the lights are very expensive to install and maintain.",
+        "Is this the right answer: A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, the streetlight service is best described as: public good, because the town had to pay for them.",
+        "Is this the right answer: A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, the streetlight service is best described as: public good, because everyone benefits from the lights.",
+        "Is this the right answer: A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, the streetlight service is best described as: private good, because only the people living in that specific town can use them.",
+        "Is this the right answer: A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, the streetlight service is best described as: private good, because the lights are very expensive to install and maintain.",
+        "Is this the right answer: A small town decides to install new, bright streetlights along all its main roads. Once these streetlights are on, it's impossible to stop any resident or visitor from benefiting from the added light at night. Based on these features, the streetlight service is best described as: public good, because the town had to pay for them. public good, because everyone benefits from the lights. private good, because only the people living in that specific town can use them. private good, because the lights are very expensive to install and maintain."
+    ],
+    q6: [
+        "If you quit a job paying $50,000 a year to start a bookstore with sales revenue of $200,000 and explicit costs of $130,000, what is the accounting profit?",
+        "What is the bookstore's accounting profit if revenue is $200,000 and direct expenses are $130,000?",
+        "How do you calculate the accounting profit for a bookstore with $200,000 in revenue and $130,000 in explicit costs?",
+        "You quit a $50k job to start a bookstore. Sales revenue is $200,000 and explicit expenses are $130,000. What is the accounting profit?",
+        "What is the accounting profit when total sales revenue is $200,000 and explicit costs are $130,000?",
+        "You decide to quit a job paying $50,000 a year to start a bookstore. This past year you had a total sales revenue of $200,000. Your direct expenses for books, rent, and employee salaries (explicit costs) amounted to $130,000. What is the bookstore's accounting profit for last year? $200,000. $330,000. $70,000. $130,000.",
+        "Is this the right answer: You decide to quit a job paying $50,000 a year to start a bookstore. This past year you had a total sales revenue of $200,000. Your direct expenses for books, rent, and employee salaries (explicit costs) amounted to $130,000. What is the bookstore's accounting profit for last year? $200,000.",
+        "Is this the right answer: You decide to quit a job paying $50,000 a year to start a bookstore. This past year you had a total sales revenue of $200,000. Your direct expenses for books, rent, and employee salaries (explicit costs) amounted to $130,000. What is the bookstore's accounting profit for last year? $330,000.",
+        "Is this the right answer: You decide to quit a job paying $50,000 a year to start a bookstore. This past year you had a total sales revenue of $200,000. Your direct expenses for books, rent, and employee salaries (explicit costs) amounted to $130,000. What is the bookstore's accounting profit for last year? $70,000.",
+        "Is this the right answer: You decide to quit a job paying $50,000 a year to start a bookstore. This past year you had a total sales revenue of $200,000. Your direct expenses for books, rent, and employee salaries (explicit costs) amounted to $130,000. What is the bookstore's accounting profit for last year? $130,000.",
+        "Is this the right answer: You decide to quit a job paying $50,000 a year to start a bookstore. This past year you had a total sales revenue of $200,000. Your direct expenses for books, rent, and employee salaries (explicit costs) amounted to $130,000. What is the bookstore's accounting profit for last year? $200,000. $330,000. $70,000. $130,000."
+    ],
+    q7: [
+        "If you consume pasta every day of the week, what happens to its marginal utility and what law does it demonstrate?",
+        "What happens to the marginal utility of pasta if you eat it every day, and what economic law is shown?",
+        "If you eat pasta every day, does marginal utility decrease and demonstrate diminishing marginal utility?",
+        "Consuming pasta every single day causes marginal utility to do what according to economic theory?",
+        "If you consume pasta every day of the week, the marginal utility of pasta is likely to decline and this demonstrates the law of diminishing marginal utility, right?",
+        "If you consume pasta every day of the week, the marginal utility of pasta is likely to ________ at the end of the week, ceteris paribus, and this demonstrates the law of ________. decline; diminishing marginal utility. increase; increasing marginal utility. increase; diminishing marginal utility. decrease; total utility.",
+        "Is this the right answer: If you consume pasta every day of the week, the marginal utility of pasta is likely to decline; diminishing marginal utility.",
+        "Is this the right answer: If you consume pasta every day of the week, the marginal utility of pasta is likely to increase; increasing marginal utility.",
+        "Is this the right answer: If you consume pasta every day of the week, the marginal utility of pasta is likely to increase; diminishing marginal utility.",
+        "Is this the right answer: If you consume pasta every day of the week, the marginal utility of pasta is likely to decrease; total utility.",
+        "Is this the right answer: If you consume pasta every day of the week, the marginal utility of pasta is likely to ________ at the end of the week, ceteris paribus, and this demonstrates the law of ________. decline; diminishing marginal utility. increase; increasing marginal utility. increase; diminishing marginal utility. decrease; total utility."
+    ],
+    q8: [
+        "A student studying for a Macroeconomics exam considers a 5th hour to raise her grade from 82% to 88% while giving up a $25 class. What is the correct marginal comparison?",
+        "To make a rational decision about studying for a 5th hour to gain 6% versus skipping a $25 class, what is the correct marginal comparison?",
+        "What is the rational marginal comparison for deciding whether to study a 5th hour to get from 82% to 88% versus skipping a $25 class?",
+        "Which comparison represents marginal benefit versus marginal cost for the student deciding on the 5th hour of study?",
+        "A student calculates studying a 5th hour increases score from 82% to 88% but skips a $25 class. What represents the correct marginal comparison?",
+        "A student has already spent 4 hours studying for a Macroeconomics exam, and believes she will get an 82%. She calculates that studying for a 5th hour will increase her score to 88%, but she’d have to skip a cooking class that cost $25. Her average study time per exam this semester is 3 hours. To make a rational decision regarding that 5th hour, which of the following represents the correct marginal comparison? The 6% increase in the exam grade versus the $25 opportunity cost of the fitness class. The 88% projected total grade versus the 4 hours of effort already invested. The marginal gain of 6% versus the average utility of 3 hours of study time. The total tuition cost per credit hour versus the potential increase in lifetime earnings from an 88% grade.",
+        "Is this the right answer: A student deciding on a 5th hour of studying: The 6% increase in the exam grade versus the $25 opportunity cost of the fitness class.",
+        "Is this the right answer: A student deciding on a 5th hour of studying: The 88% projected total grade versus the 4 hours of effort already invested.",
+        "Is this the right answer: A student deciding on a 5th hour of studying: The marginal gain of 6% versus the average utility of 3 hours of study time.",
+        "Is this the right answer: A student deciding on a 5th hour of studying: The total tuition cost per credit hour versus the potential increase in lifetime earnings from an 88% grade.",
+        "Is this the right answer: To make a rational decision regarding that 5th hour, which of the following represents the correct marginal comparison? The 6% increase in the exam grade versus the $25 opportunity cost of the fitness class. The 88% projected total grade versus the 4 hours of effort already invested. The marginal gain of 6% versus the average utility of 3 hours of study time. The total tuition cost per credit hour versus the potential increase in lifetime earnings from an 88% grade."
+    ],
+    q9: [
+        "You leave an $85,000 job to start a software consultancy with $210,000 revenue and $95,000 expenses. What is the economic profit?",
+        "What is the consultancy's economic profit for the first year if revenue is $210,000, expenses are $95,000, and foregone salary is $85,000?",
+        "How do you calculate the economic profit of the software consultancy taking into account both explicit expenses ($95k) and implicit cost ($85k)?",
+        "What is the consultancy's economic profit after subtracting both explicit costs and implicit opportunity costs from total revenue?",
+        "If revenue is $210,000, business expenses are $95,000, and previous salary was $85,000, is economic profit $30,000?",
+        "You decide to leave your corporate job, where you earned $85,000 a year, to start your own independent software consultancy. In your first year, you brought in $210,000 in total revenue. Your business expenses (office rent, software licenses, and hardware) totaled $95,000. What is the consultancy's economic profit for the first year? $210,000. $115,000. $30,000. $180,000.",
+        "Is this the right answer: What is the consultancy's economic profit for the first year? $210,000.",
+        "Is this the right answer: What is the consultancy's economic profit for the first year? $115,000.",
+        "Is this the right answer: What is the consultancy's economic profit for the first year? $30,000.",
+        "Is this the right answer: What is the consultancy's economic profit for the first year? $180,000.",
+        "Is this the right answer: You decide to leave your corporate job, where you earned $85,000 a year, to start your own independent software consultancy. In your first year, you brought in $210,000 in total revenue. Your business expenses (office rent, software licenses, and hardware) totaled $95,000. What is the consultancy's economic profit for the first year? $210,000. $115,000. $30,000. $180,000."
     ]
 };
