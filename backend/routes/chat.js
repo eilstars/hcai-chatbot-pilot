@@ -425,8 +425,7 @@ router.post('/message', async (req, res) => {
         });
         promptTrace[promptTrace.length - 1].output = likelyContextDependent ? 'CONTEXT_DEPENDENT_CANDIDATE' : 'LIKELY_STANDALONE';
 
-        if (likelyContextDependent) {
-            const standalonePrompt = `
+        const standalonePrompt = `
         Decide whether the "User Message" itself contains enough information to stand alone without relying on earlier chat history.
 
         Important rule: A message is NOT standalone if it is vague, elliptical, or depends on prior context, pronouns, or earlier discussion.
@@ -441,23 +440,23 @@ router.post('/message', async (req, res) => {
 
         User Message: "${originalMessage}"
     `;
-            const standaloneMessages = [{ role: 'system', content: standalonePrompt }];
-            trackPrompt({ stage: 'judgeIfInputIsStandalone', model: 'gpt-4o', messages: standaloneMessages, max_tokens: 2 });
-            const standaloneCompletion = await openai.chat.completions.create({
-                model: 'gpt-4o',
-                messages: standaloneMessages,
-                max_tokens: 2
-            });
-            promptTrace[promptTrace.length - 1].output = standaloneCompletion.choices[0].message.content;
-            isStandalone = standaloneCompletion.choices[0].message.content.includes('YES');
+        const standaloneMessages = [{ role: 'system', content: standalonePrompt }];
+        trackPrompt({ stage: 'judgeIfInputIsStandalone', model: 'gpt-4o', messages: standaloneMessages, max_tokens: 2 });
+        const standaloneCompletion = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: standaloneMessages,
+            max_tokens: 2
+        });
+        promptTrace[promptTrace.length - 1].output = standaloneCompletion.choices[0].message.content;
+        isStandalone = standaloneCompletion.choices[0].message.content.includes('YES');
 
-            if (!isStandalone) {
-                const historyString = (chatHistory || [])
-                    .map(m => `${(m.role || m.sender) === 'user' ? 'User' : 'Assistant'}: ${m.content || m.text}`)
-                    .join('\n');
+        if (!isStandalone) {
+            const historyString = (chatHistory || [])
+                .map(m => `${(m.role || m.sender) === 'user' ? 'User' : 'Assistant'}: ${m.content || m.text}`)
+                .join('\n');
 
-                const rewritePrompt = `
-        The user has sent a short follow-up message that doesn't make sense on its own.
+            const rewritePrompt = `
+        The user has sent a follow-up message that doesn't make sense on its own.
         Please rewrite the user's "New Message" into a complete, standalone question by adding context from the "Chat History".
         
         Chat History:
@@ -467,33 +466,32 @@ router.post('/message', async (req, res) => {
 
         Rewritten Standalone Question:
     `;
-                const rewriteMessages = [{ role: 'system', content: rewritePrompt }];
-                trackPrompt({ stage: 'addContextToInput', model: 'gpt-4o', messages: rewriteMessages, max_tokens: 150 });
-                const rewriteCompletion = await openai.chat.completions.create({
-                    model: 'gpt-4o',
-                    messages: rewriteMessages,
-                    max_tokens: 150
-                });
-                promptTrace[promptTrace.length - 1].output = rewriteCompletion.choices[0].message.content;
-                const rawRewritten = rewriteCompletion.choices[0].message.content.trim();
+            const rewriteMessages = [{ role: 'system', content: rewritePrompt }];
+            trackPrompt({ stage: 'addContextToInput', model: 'gpt-4o', messages: rewriteMessages, max_tokens: 150 });
+            const rewriteCompletion = await openai.chat.completions.create({
+                model: 'gpt-4o',
+                messages: rewriteMessages,
+                max_tokens: 150
+            });
+            promptTrace[promptTrace.length - 1].output = rewriteCompletion.choices[0].message.content;
+            const rawRewritten = rewriteCompletion.choices[0].message.content.trim();
 
-                const rewritePreservedIntent = isRewriteIntentPreserved(originalMessage, rawRewritten);
-                trackPrompt({
-                    stage: 'rewriteIntentValidation',
-                    model: 'rule-based',
-                    messages: [{ role: 'system', content: `original="${originalMessage}"\nrewritten="${rawRewritten}"` }]
-                });
-                promptTrace[promptTrace.length - 1].output = rewritePreservedIntent ? 'PASSED' : 'FAILED';
+            const rewritePreservedIntent = isRewriteIntentPreserved(originalMessage, rawRewritten);
+            trackPrompt({
+                stage: 'rewriteIntentValidation',
+                model: 'rule-based',
+                messages: [{ role: 'system', content: `original="${originalMessage}"\nrewritten="${rawRewritten}"` }]
+            });
+            promptTrace[promptTrace.length - 1].output = rewritePreservedIntent ? 'PASSED' : 'FAILED';
 
-                if (rewritePreservedIntent) {
-                    rewrittenMessage = rawRewritten;
-                    wasRewritten = true;
-                    effectiveMessage = rawRewritten;
-                    console.log(`Context added. Original: "${originalMessage}", Effective: "${effectiveMessage}"`);
-                } else {
-                    effectiveMessage = originalMessage;
-                    console.log(`Rewrite discarded due to intent drift. Original kept: "${originalMessage}"`);
-                }
+            if (rewritePreservedIntent) {
+                rewrittenMessage = rawRewritten;
+                wasRewritten = true;
+                effectiveMessage = rawRewritten;
+                console.log(`Context added. Original: "${originalMessage}", Effective: "${effectiveMessage}"`);
+            } else {
+                effectiveMessage = originalMessage;
+                console.log(`Rewrite discarded due to intent drift. Original kept: "${originalMessage}"`);
             }
         }
 
@@ -600,7 +598,7 @@ router.post('/message', async (req, res) => {
             const tutorMessages = [
                 { role: 'system', content: systemMessage },
                 ...formattedHistory,
-                { role: 'user', content: originalMessage || effectiveMessage || '' }
+                { role: 'user', content: originalMessage }
             ];
             trackPrompt({ stage: 'finalTutorResponse', model: 'gpt-4', messages: tutorMessages });
             const response = await openai.chat.completions.create({
