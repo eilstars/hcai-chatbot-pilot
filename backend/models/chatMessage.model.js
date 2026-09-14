@@ -3,7 +3,6 @@ const { Schema } = mongoose;
 
 const ChatMessageSchema = new Schema({
   participantId: { type: String, required: true, index: true },
-  round: { type: Number, required: true, enum: [1, 2] },
   sender: { type: String, required: true, enum: ['user', 'bot', 'system'] },
   message: { type: String, required: true },
   promptText: { type: String, default: '' },
@@ -19,21 +18,12 @@ const ChatMessageSchema = new Schema({
   // Semantic similarity score (numerical cosine or verbatim match score)
   semanticScore: { type: Number, default: null, sparse: true },
 
-  // Legacy field aliases for backwards compatibility
-  interventionType: {
-    type: String,
-    enum: ['verbatim', 'semantic', 'outlandish', 'none'],
-    default: 'none'
-  },
-  interventionScore: { type: Number, default: null, sparse: true },
-
   semanticMatchedBankEntry: { type: String, default: null },
 
   // Evaluated directly from question-revealing evaluator without overwriting threeStepLogic
   questionRevealsAnswer: { type: Boolean, default: null, sparse: true },
 
-  // Standalone logic explicit tracking variables
-  isStandalone: { type: Boolean, default: true },
+  // Standalone logic tracking variable
   questionStandalone: { type: Boolean, default: true },
 
   wasRewritten: { type: Boolean, default: false },

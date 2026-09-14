@@ -60,8 +60,8 @@ function formatPromptTraceAsText(promptTrace) {
         .join('\n\n---\n\n');
 }
 
-function buildPromptCacheKey(participantId, round, currentQuestionId, message) {
-    return `${participantId || ''}|${round || ''}|${currentQuestionId || ''}|${(message || '').trim()}`;
+function buildPromptCacheKey(participantId, currentQuestionId, message) {
+    return `${participantId || ''}|${currentQuestionId || ''}|${(message || '').trim()}`;
 }
 
 function setPromptTextCache(key, promptText) {
@@ -92,12 +92,11 @@ function getPromptTextCache(key) {
     return entry.promptText || '';
 }
 
-async function hydratePromptTextOnLatestUserLog({ participantId, round, currentQuestionId, message, promptText }) {
-    if (!participantId || !round || !message || !promptText) return;
+async function hydratePromptTextOnLatestUserLog({ participantId, currentQuestionId, message, promptText }) {
+    if (!participantId || !message || !promptText) return;
 
     const query = {
         participantId,
-        round,
         sender: 'user',
         message,
         promptText: { $in: [null, ''] }
@@ -211,7 +210,9 @@ async function isMessageRelatedToTopic(message, question) {
     }
 
     const prompt = `
-You are classifying whether a student message is related to the learning topic.
+You are evaluating whether a message from a learner is appropriate for a microeconomics tutoring session.
+
+A learner is attempting to learn economics with a tutor. Is this message a reasonable on-topic message from a student?
 
 Current learning question/topic:
 "${question.text}"
@@ -219,7 +220,20 @@ Current learning question/topic:
 Student message:
 "${message}"
 
-Is the student message related to this topic/question, even if loosely or partially?
+Treat short, casual, and partial messages as valid if they are still clearly related to learning, understanding, clarifying, or responding to the economics concept. Examples of on-topic messages include brief acknowledgements, corrections, and clarifying statements such as:
+- "That makes sense"
+- "Okay"
+- "Awesome"
+- "Not really, I believe I understand this particular question. Thank you."
+- "I meant, 950000"
+- "that was my guess too. glad we are on the same page."
+- "ohh"
+- "yes, I think so"
+- "can you explain why the opportunity cost is 35?"
+
+Do not classify a message as off-topic merely because it is short, conversational, or incomplete.
+Only classify as NO if it is clearly unrelated to the learning task, such as irrelevant topics, requests for non-educational content, or obviously off-task behavior.
+
 Respond with ONLY "YES" or "NO".
 `;
 
@@ -478,14 +492,15 @@ router.post('/message', async (req, res) => {
             }
         }
 
-        // --- 2. Intervention Checks (always use original user intent) ---
+        // --- 2. Intervention Checks (use the pipeline message after optional rewrite) ---
         let systemMessage = "You are a helpful microeconomics tutor. Use the chat history for context.";
         let botReplyText = "";
         let threeStepLogic = "none";
         let semanticScore = null;
         let semanticMatchedBankEntry = null;
         let questionRevealsAnswer = null;
-        const interventionMessage = originalMessage;
+        const pipelineMessage = effectiveMessage || originalMessage;
+        const interventionMessage = pipelineMessage;
 
         // Find the specific question the user is working on
         const currentQuestionObj = questions.find(q => q.id === currentQuestionId);
@@ -580,7 +595,7 @@ router.post('/message', async (req, res) => {
             const tutorMessages = [
                 { role: 'system', content: systemMessage },
                 ...formattedHistory,
-                { role: 'user', content: effectiveMessage }
+                { role: 'user', content: originalMessage || effectiveMessage || '' }
             ];
             trackPrompt({ stage: 'finalTutorResponse', model: 'gpt-4', messages: tutorMessages });
             const response = await openai.chat.completions.create({
