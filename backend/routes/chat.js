@@ -427,9 +427,14 @@ router.post('/message', async (req, res) => {
 
         if (likelyContextDependent) {
             const standalonePrompt = `
-        Analyze the "User Message" in the context of the "Chat History".
-        Does the "User Message" make complete sense on its own, or is it a short follow-up (like "yes", "why?", "can you answer it") that depends on the previous turn?
-        Respond with only the single word "YES" if it's standalone, or "NO" if it needs context.
+        Decide whether the "User Message" itself contains enough information to stand alone without relying on earlier chat history.
+
+        Important rule: A message is NOT standalone if it is vague, elliptical, or depends on prior context, pronouns, or earlier discussion.
+        Examples of messages that should be "NO": "elaborate", "why?", "what about it", "that makes no sense", "can you answer it", "yes", "okay", "explain more", "what does that mean?"
+        Examples of messages that should be "YES": "Can you explain opportunity cost in this question?", "What is the difference between scarcity and shortage?", "Please clarify the concept of marginal utility."
+
+        Evaluate the message by itself, not whether the tutor could answer it using the current question context.
+        Respond with only the single word "YES" if the message is self-contained and can stand alone, or "NO" if it depends on earlier chat history or is too vague to be understood without context.
 
         Chat History:
         ${(chatHistory || []).map(m => `${(m.role || m.sender) === 'user' ? 'User' : 'Assistant'}: ${m.content || m.text}`).join('\n')}
