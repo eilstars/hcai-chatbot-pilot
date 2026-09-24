@@ -358,6 +358,65 @@ function getBestSemanticBankEntryForQuestion(messageVector, questionId, question
     return { entry: bestEntry, index: bestIndex, score: bestScore };
 }
 
+async function isMessageOutlandish(message, question) {
+    if (!message || !question?.text) {
+        return { isOutlandish: false, reason: 'insufficient-input' };
+    }
+
+    const optionText = question.options && typeof question.options === 'object'
+        ? Object.entries(question.options).map(([key, value]) => `${key}. ${value}`).join('\n')
+        : 'No answer options available.';
+
+    const prompt = `
+You are evaluating whether a learner message is on-topic or off-topic in a microeconomics tutoring session.
+
+Current question:
+"${question.text}"
+
+Answer options:
+${optionText}
+
+Student message:
+"${message}"
+
+A message is ON-TOPIC if it is relevant to the economics concept, the question, a clarifying question, a follow-up explanation, a brief acknowledgment, or an answer-choice discussion tied to the learning goal.
+Examples of ON-TOPIC messages:
+- "thank you"
+- "thanks!"
+- "okay, I see it now"
+- "I think it's A because ..."
+- "why is opportunity cost the right answer here?"
+- "can you explain the difference between scarcity and shortage?"
+- "so the answer is B?"
+
+A message is OUTLANDISH only if it is clearly unrelated to the educational task, random chatter, non-learning content, or obviously off-task behavior.
+Examples of OUTLANDISH messages:
+- "What is the weather in Tokyo?"
+- "Can you write a poem?"
+- "This has nothing to do with economics"
+- unrelated personal or irrelevant content
+
+Respond with ONLY "YES" if the message is outlandish/off-topic. Otherwise respond with ONLY "NO".
+`;
+
+    try {
+        const completion = await openai.chat.completions.create({
+            model: 'gpt-4o',
+            messages: [{ role: 'system', content: prompt }],
+            max_tokens: 5
+        });
+
+        const result = (completion.choices[0]?.message?.content || '').trim().toUpperCase();
+        return {
+            isOutlandish: result.includes('YES'),
+            reason: `model-result:${result || 'EMPTY'}`
+        };
+    } catch (error) {
+        console.error('Outlandish check failed:', error);
+        return { isOutlandish: false, reason: 'model-error' };
+    }
+}
+
 // --- Main Chat Route ---
 router.post('/message', async (req, res) => {
     const { participantId, message, round, bypassIntervention, chatHistory, currentQuestionId, replayMode } = req.body;
@@ -509,74 +568,37 @@ router.post('/message', async (req, res) => {
         const currentQuestionObj = questions.find(q => q.id === currentQuestionId);
 
         if (currentQuestionObj) {
-            // Check 1: Verbatim (Targeted)
-            // Compare against the full text of the CURRENT question (which includes options)
             const similarity = stringSimilarity.compareTwoStrings(interventionMessage.toLowerCase(), currentQuestionObj.text.toLowerCase());
 
-            if (similarity > 0.95) { // High threshold for full text match
+            if (similarity > 0.95) {
                 threeStepLogic = "verbatim";
                 semanticScore = similarity;
-                // No behavior intervention: all users receive the standard tutor response.
             } else {
-                // Check 2: Semantic (Targeted)
-                const extractor = await initializeSemanticSearch();
-                const messageEmbedding = await extractor(interventionMessage, { pooling: 'mean', normalize: true });
-                const messageVector = Array.from(messageEmbedding.data);
-                const variationEmbeddings = await getSemanticEmbeddingsForQuestion(currentQuestionObj.id, currentQuestionObj, extractor);
-
-                const targetedMatch = getQuestionSemanticBestMatch(messageVector, currentQuestionObj, variationEmbeddings);
-                const highestScore = targetedMatch.score;
-                const bestBankMatch = getBestSemanticBankEntryForQuestion(messageVector, currentQuestionObj.id, currentQuestionObj, variationEmbeddings);
-                const bestBankEntry = bestBankMatch.entry;
-                const bestBankEntryScore = bestBankMatch.score;
-                const bestBankEntryIndex = bestBankMatch.index;
-
-                if (typeof bestBankEntry === 'string' && bestBankEntry.trim().length > 0) {
-                    semanticMatchedBankEntry = bestBankEntry;
-                }
-
-                // semanticScore records the semantic similarity score
-                semanticScore = highestScore;
-
+                const outlandishCheck = await isMessageOutlandish(interventionMessage, currentQuestionObj);
                 trackPrompt({
-                    stage: 'semanticBestQuestionMatch',
-                    model: 'rule-based',
+                    stage: 'outlandishCheck',
+                    model: 'gpt-4o',
                     messages: [{
                         role: 'system',
-                        content: `targetedQuestion=${currentQuestionObj.id}; targetedScore=${highestScore.toFixed(4)}; bestBankEntryIndex=${bestBankEntryIndex}; bestBankEntryScore=${bestBankEntryScore.toFixed(4)}`
+                        content: `questionId=${currentQuestionObj.id}; reason=${outlandishCheck.reason}`
                     }]
                 });
-                promptTrace[promptTrace.length - 1].output = `bestBankEntryIndex=${bestBankEntryIndex}; bestBankEntryScore=${bestBankEntryScore.toFixed(4)}`;
+                promptTrace[promptTrace.length - 1].output = outlandishCheck.isOutlandish ? 'OUTLANDISH' : 'ON_TOPIC';
 
-                if (highestScore > 0.75) {
-                    threeStepLogic = "semantic";
+                if (outlandishCheck.isOutlandish) {
+                    threeStepLogic = "outlandish";
                 } else {
-                    // Check 3: Off-Topic (LLM topic-relatedness)
-                    const topicCheck = await isMessageRelatedToTopic(interventionMessage, currentQuestionObj);
-                    trackPrompt({
-                        stage: 'topicRelatednessCheck',
-                        model: 'gpt-4o',
-                        messages: [{
-                            role: 'system',
-                            content: `questionId=${currentQuestionObj.id}; reason=${topicCheck.reason}`
-                        }]
-                    });
-                    promptTrace[promptTrace.length - 1].output = topicCheck.isOnTopic ? 'RELATED' : 'NOT_RELATED';
+                    questionRevealsAnswer = await evaluateIfQuestionRevealsAnswer(
+                        interventionMessage,
+                        currentQuestionObj.text,
+                        currentQuestionObj.answer,
+                        currentQuestionObj.options
+                    );
 
-                    if (!topicCheck.isOnTopic) {
-                        threeStepLogic = "outlandish";
+                    if (questionRevealsAnswer) {
+                        threeStepLogic = "semantic";
                     }
                 }
-            }
-
-            // Evaluate if question directly seeks answer choice as a separate field (DO NOT overwrite threeStepLogic)
-            if (currentQuestionObj.answer && currentQuestionObj.options) {
-                questionRevealsAnswer = await evaluateIfQuestionRevealsAnswer(
-                    interventionMessage,
-                    currentQuestionObj.text,
-                    currentQuestionObj.answer,
-                    currentQuestionObj.options
-                );
             }
         }
 
@@ -595,8 +617,17 @@ router.post('/message', async (req, res) => {
                     role: (msg.role || msg.sender) === 'user' ? 'user' : 'assistant',
                     content: msg.content || msg.text || ''
                 }));
+
+            const questionContextBlock = currentQuestionObj
+                ? {
+                    role: 'system',
+                    content: `Current question: ${currentQuestionObj.text}\n\nOptions:\n${Object.entries(currentQuestionObj.options || {}).map(([key, value]) => `${key}. ${value}`).join('\n')}`
+                }
+                : null;
+
             const tutorMessages = [
                 { role: 'system', content: systemMessage },
+                ...(questionContextBlock ? [questionContextBlock] : []),
                 ...formattedHistory,
                 { role: 'user', content: originalMessage }
             ];
