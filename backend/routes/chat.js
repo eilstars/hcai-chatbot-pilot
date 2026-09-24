@@ -360,7 +360,7 @@ function getBestSemanticBankEntryForQuestion(messageVector, questionId, question
 
 // --- Main Chat Route ---
 router.post('/message', async (req, res) => {
-    const { participantId, message, round, bypassIntervention, chatHistory, currentQuestionId } = req.body;
+    const { participantId, message, round, bypassIntervention, chatHistory, currentQuestionId, replayMode } = req.body;
     try {
         const promptTrace = [];
         const trackPrompt = ({ stage, model, messages, max_tokens = null }) => {
@@ -582,9 +582,9 @@ router.post('/message', async (req, res) => {
 
         // --- 3. Handle Final Response ---
 
-        if (round === 1 && (threeStepLogic === 'verbatim' || threeStepLogic === 'semantic')) {
+        if (!replayMode && round === 1 && (threeStepLogic === 'verbatim' || threeStepLogic === 'semantic')) {
             await User.updateOne({ _id: user._id }, { $inc: { interventions_round1: 1 } });
-        } else if (round === 2 && (threeStepLogic === 'verbatim' || threeStepLogic === 'semantic')) {
+        } else if (!replayMode && round === 2 && (threeStepLogic === 'verbatim' || threeStepLogic === 'semantic')) {
             await User.updateOne({ _id: user._id }, { $inc: { suboptimal_questions_round2: 1 } });
         }
 
@@ -612,13 +612,15 @@ router.post('/message', async (req, res) => {
         const responsePromptText = formatPromptTraceAsText(promptTrace);
         const cacheKey = buildPromptCacheKey(participantId, round, currentQuestionId, message);
         setPromptTextCache(cacheKey, responsePromptText);
-        await hydratePromptTextOnLatestUserLog({
-            participantId,
-            round,
-            currentQuestionId,
-            message,
-            promptText: responsePromptText
-        });
+        if (!replayMode) {
+            await hydratePromptTextOnLatestUserLog({
+                participantId,
+                round,
+                currentQuestionId,
+                message,
+                promptText: responsePromptText
+            });
+        }
 
         res.json({
             message: botReplyText,
