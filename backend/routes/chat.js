@@ -3,41 +3,13 @@ import { OpenAI } from 'openai';
 import stringSimilarity from 'string-similarity';
 import User from '../models/user.model.js';
 import ChatMessage from '../models/chatMessage.model.js';
+import ReplayMessage from '../models/replayMessage.model.js';
 import TestResult from '../models/testResult.model.js';
 import { questions } from '../testQuestions.js';
-import { semanticBank } from '../semanticBank.js';
-import { pipeline } from '@xenova/transformers';
 
 const router = express.Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const promptTextCache = new Map();
-
-// --- Semantic Search Setup ---
-let extractorPromise;
-async function initializeSemanticSearch() {
-    if (!extractorPromise) {
-        // Use pipeline() which is the recommended way
-        extractorPromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2');
-    }
-    return extractorPromise;
-}
-
-// Function to calculate cosine similarity
-function cosineSimilarity(vecA, vecB) {
-    let dotProduct = 0;
-    let normA = 0;
-    let normB = 0;
-    for (let i = 0; i < vecA.length; i++) {
-        dotProduct += vecA[i] * vecB[i];
-        normA += vecA[i] * vecA[i];
-        normB += vecB[i] * vecB[i];
-    }
-    // Add epsilon for numerical stability
-    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB) + 1e-8);
-}
-
-// Initialize the model when the server starts
-initializeSemanticSearch().then(() => console.log("Semantic search model loaded and ready."));
 
 function formatPromptTraceAsText(promptTrace) {
     if (!Array.isArray(promptTrace) || promptTrace.length === 0) {
@@ -256,178 +228,20 @@ Respond with ONLY "YES" or "NO".
     }
 }
 
-const dynamicBankEmbeddingsCache = new Map();
-
-async function getSemanticEmbeddingsForQuestion(questionId, questionObj, extractor) {
-    if (!questionId) return [];
-    const bankEntries = Array.isArray(semanticBank[questionId]) ? semanticBank[questionId] : [];
-    if (bankEntries.length === 0) return questionObj?.semanticEmbeddings || [];
-
-    if (Array.isArray(questionObj?.semanticEmbeddings) && questionObj.semanticEmbeddings.length >= bankEntries.length) {
-        return questionObj.semanticEmbeddings;
-    }
-
-    if (dynamicBankEmbeddingsCache.has(questionId)) {
-        return dynamicBankEmbeddingsCache.get(questionId);
-    }
-
-    const embeddings = [];
-    for (let i = 0; i < bankEntries.length; i++) {
-        if (Array.isArray(questionObj?.semanticEmbeddings) && questionObj.semanticEmbeddings[i]) {
-            embeddings.push(questionObj.semanticEmbeddings[i]);
-        } else if (extractor) {
-            try {
-                const output = await extractor(bankEntries[i], { pooling: 'mean', normalize: true });
-                embeddings.push(Array.from(output.data));
-            } catch (err) {
-                console.error(`Failed to extract embedding for ${questionId} entry ${i}:`, err);
-            }
-        }
-    }
-
-    if (embeddings.length > 0) {
-        dynamicBankEmbeddingsCache.set(questionId, embeddings);
-    }
-    return embeddings;
-}
-
-function getQuestionSemanticBestMatch(messageVector, question, variationEmbeddings = null) {
-    if (!question || !Array.isArray(messageVector) || messageVector.length === 0) {
-        return { score: 0, source: null };
-    }
-
-    let bestScore = 0;
-    let bestSource = null;
-
-    const embeddingsToCheck = Array.isArray(variationEmbeddings) && variationEmbeddings.length > 0
-        ? variationEmbeddings
-        : question.semanticEmbeddings;
-
-    if (Array.isArray(embeddingsToCheck)) {
-        for (let i = 0; i < embeddingsToCheck.length; i++) {
-            const variationEmbedding = embeddingsToCheck[i];
-            if (!Array.isArray(variationEmbedding) || variationEmbedding.length !== messageVector.length) continue;
-            const score = cosineSimilarity(messageVector, variationEmbedding);
-            if (score > bestScore) {
-                bestScore = score;
-                bestSource = `semanticEmbedding:${i}`;
-            }
-        }
-    }
-
-    if (Array.isArray(question.embedding) && question.embedding.length === messageVector.length) {
-        const mainScore = cosineSimilarity(messageVector, question.embedding);
-        if (mainScore > bestScore) {
-            bestScore = mainScore;
-            bestSource = 'mainEmbedding';
-        }
-    }
-
-    return { score: bestScore, source: bestSource };
-}
-
-function getBestSemanticBankEntryForQuestion(messageVector, questionId, questionObj, variationEmbeddings = null) {
-    const fallback = { entry: null, index: -1, score: -1 };
-    if (!Array.isArray(messageVector) || messageVector.length === 0 || !questionObj || !questionId) return fallback;
-
-    const bankEntries = Array.isArray(semanticBank[questionId]) ? semanticBank[questionId] : [];
-    if (bankEntries.length === 0) return fallback;
-
-    let bestEntry = null;
-    let bestScore = -1;
-    let bestIndex = -1;
-
-    const embeddingsToCheck = Array.isArray(variationEmbeddings) && variationEmbeddings.length > 0
-        ? variationEmbeddings
-        : questionObj.semanticEmbeddings;
-
-    for (let i = 0; i < bankEntries.length; i++) {
-        const variationEmbedding = Array.isArray(embeddingsToCheck)
-            ? embeddingsToCheck[i]
-            : null;
-        if (!Array.isArray(variationEmbedding) || variationEmbedding.length !== messageVector.length) continue;
-
-        const score = cosineSimilarity(messageVector, variationEmbedding);
-        if (score > bestScore) {
-            bestScore = score;
-            bestEntry = bankEntries[i];
-            bestIndex = i;
-        }
-    }
-
-    return { entry: bestEntry, index: bestIndex, score: bestScore };
-}
-
-async function isMessageOutlandish(message, question) {
-    if (!message || !question?.text) {
-        return { isOutlandish: false, reason: 'insufficient-input' };
-    }
-
-    const optionText = question.options && typeof question.options === 'object'
-        ? Object.entries(question.options).map(([key, value]) => `${key}. ${value}`).join('\n')
-        : 'No answer options available.';
-
-    const prompt = `
-You are evaluating whether a learner message is on-topic or off-topic in a microeconomics tutoring session.
-
-Current question:
-"${question.text}"
-
-Answer options:
-${optionText}
-
-Student message:
-"${message}"
-
-A message is ON-TOPIC if it is relevant to the economics concept, the question, a clarifying question, a follow-up explanation, a brief acknowledgment, or an answer-choice discussion tied to the learning goal.
-Examples of ON-TOPIC messages:
-- "thank you"
-- "thanks!"
-- "okay, I see it now"
-- "I think it's A because ..."
-- "why is opportunity cost the right answer here?"
-- "can you explain the difference between scarcity and shortage?"
-- "so the answer is B?"
-
-A message is OUTLANDISH only if it is clearly unrelated to the educational task, random chatter, non-learning content, or obviously off-task behavior.
-Examples of OUTLANDISH messages:
-- "What is the weather in Tokyo?"
-- "Can you write a poem?"
-- "This has nothing to do with economics"
-- unrelated personal or irrelevant content
-
-Respond with ONLY "YES" if the message is outlandish/off-topic. Otherwise respond with ONLY "NO".
-`;
-
-    try {
-        const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [{ role: 'system', content: prompt }],
-            max_tokens: 5
-        });
-
-        const result = (completion.choices[0]?.message?.content || '').trim().toUpperCase();
-        return {
-            isOutlandish: result.includes('YES'),
-            reason: `model-result:${result || 'EMPTY'}`
-        };
-    } catch (error) {
-        console.error('Outlandish check failed:', error);
-        return { isOutlandish: false, reason: 'model-error' };
-    }
-}
-
 // --- Main Chat Route ---
 router.post('/message', async (req, res) => {
-    const { participantId, message, round, bypassIntervention, chatHistory, currentQuestionId, replayMode } = req.body;
+    const { participantId, message, round, bypassIntervention, chatHistory, currentQuestionId, replayMode, replayRound, sourceRow } = req.body;
     try {
         const promptTrace = [];
         const trackPrompt = ({ stage, model, messages, max_tokens = null }) => {
             promptTrace.push({ stage, model, messages, max_tokens });
         };
 
-        let user = await User.findOne({ participantId });
-        if (!user) return res.status(404).json({ msg: 'User not found' });
+        let user = null;
+        {
+            user = await User.findOne({ participantId });
+            if (!user) return res.status(404).json({ msg: 'User not found' });
+        }
 
         // --- Optional bypass path (kept for compatibility) ---
         if (bypassIntervention) {
@@ -454,12 +268,9 @@ router.post('/message', async (req, res) => {
             return res.json({
                 message: botReplyText,
                 sender: 'bot',
-                wasIntervention: true,
-                threeStepLogic: 'semantic',
-                semanticScore: null,
-                questionRevealsAnswer: null,
-                interventionType: 'semantic',
-                interventionScore: null,
+                wasIntervention: false,
+                threeStepLogic: 'none',
+                interventionType: 'none',
                 promptText: responsePromptText,
                 isStandalone: true,
                 questionStandalone: true,
@@ -469,22 +280,24 @@ router.post('/message', async (req, res) => {
             });
         }
 
-        // --- 1. Pre-processing Step ---
+        // --- 1. Pre-processing and intervention checks ---
         const originalMessage = (message || '').trim();
-        const likelyContextDependent = isLikelyContextDependent(originalMessage);
         let effectiveMessage = originalMessage;
         let rewrittenMessage = null;
         let isStandalone = true;
         let wasRewritten = false;
+        const currentQuestionObj = questions.find(q => q.id === String(currentQuestionId));
 
-        trackPrompt({
-            stage: 'deterministicContextGate',
-            model: 'rule-based',
-            messages: [{ role: 'system', content: `likelyContextDependent=${likelyContextDependent}; message="${originalMessage}"` }]
-        });
-        promptTrace[promptTrace.length - 1].output = likelyContextDependent ? 'CONTEXT_DEPENDENT_CANDIDATE' : 'LIKELY_STANDALONE';
+        if (!replayMode) {
+            const likelyContextDependent = isLikelyContextDependent(originalMessage);
+            trackPrompt({
+                stage: 'deterministicContextGate',
+                model: 'rule-based',
+                messages: [{ role: 'system', content: `likelyContextDependent=${likelyContextDependent}; message="${originalMessage}"` }]
+            });
+            promptTrace[promptTrace.length - 1].output = likelyContextDependent ? 'CONTEXT_DEPENDENT_CANDIDATE' : 'LIKELY_STANDALONE';
 
-        const standalonePrompt = `
+            const standalonePrompt = `
         Decide whether the "User Message" itself contains enough information to stand alone without relying on earlier chat history.
 
         Important rule: A message is NOT standalone if it is vague, elliptical, or depends on prior context, pronouns, or earlier discussion.
@@ -499,7 +312,7 @@ router.post('/message', async (req, res) => {
 
         User Message: "${originalMessage}"
     `;
-        const standaloneMessages = [{ role: 'system', content: standalonePrompt }];
+            const standaloneMessages = [{ role: 'system', content: standalonePrompt }];
         trackPrompt({ stage: 'judgeIfInputIsStandalone', model: 'gpt-4o', messages: standaloneMessages, max_tokens: 2 });
         const standaloneCompletion = await openai.chat.completions.create({
             model: 'gpt-4o',
@@ -509,7 +322,7 @@ router.post('/message', async (req, res) => {
         promptTrace[promptTrace.length - 1].output = standaloneCompletion.choices[0].message.content;
         isStandalone = standaloneCompletion.choices[0].message.content.includes('YES');
 
-        if (!isStandalone) {
+            if (!isStandalone) {
             const historyString = (chatHistory || [])
                 .map(m => `${(m.role || m.sender) === 'user' ? 'User' : 'Assistant'}: ${m.content || m.text}`)
                 .join('\n');
@@ -552,41 +365,45 @@ router.post('/message', async (req, res) => {
                 effectiveMessage = originalMessage;
                 console.log(`Rewrite discarded due to intent drift. Original kept: "${originalMessage}"`);
             }
+            }
         }
 
-        // --- 2. Intervention Checks (use the pipeline message after optional rewrite) ---
         let systemMessage = "You are a helpful microeconomics tutor. Use the chat history for context.";
         let botReplyText = "";
         let threeStepLogic = "none";
-        let semanticScore = null;
-        let semanticMatchedBankEntry = null;
         let questionRevealsAnswer = null;
-        const pipelineMessage = effectiveMessage || originalMessage;
-        const interventionMessage = pipelineMessage;
 
-        // Find the specific question the user is working on
-        const currentQuestionObj = questions.find(q => q.id === currentQuestionId);
-
+        // --- 2. Relevancy, verbatim, and answer-seeking checks ---
         if (currentQuestionObj) {
-            const similarity = stringSimilarity.compareTwoStrings(interventionMessage.toLowerCase(), currentQuestionObj.text.toLowerCase());
+            const interventionMessage = effectiveMessage || originalMessage;
+            const relatedness = await isMessageRelatedToTopic(interventionMessage, currentQuestionObj);
+            trackPrompt({
+                stage: 'relevancyCheck',
+                model: 'gpt-4o',
+                messages: [{
+                    role: 'system',
+                    content: `questionId=${currentQuestionObj.id}; message="${interventionMessage}"`
+                }],
+                max_tokens: 5
+            });
+            promptTrace[promptTrace.length - 1].output = relatedness.isOnTopic ? 'ON_TOPIC' : 'OUTLANDISH';
 
-            if (similarity > 0.95) {
-                threeStepLogic = "verbatim";
-                semanticScore = similarity;
+            if (!relatedness.isOnTopic) {
+                threeStepLogic = 'outlandish';
             } else {
-                const outlandishCheck = await isMessageOutlandish(interventionMessage, currentQuestionObj);
+                const verbatimSimilarity = stringSimilarity.compareTwoStrings(
+                    interventionMessage.toLowerCase(),
+                    currentQuestionObj.text.toLowerCase()
+                );
                 trackPrompt({
-                    stage: 'outlandishCheck',
-                    model: 'gpt-4o',
-                    messages: [{
-                        role: 'system',
-                        content: `questionId=${currentQuestionObj.id}; reason=${outlandishCheck.reason}`
-                    }]
+                    stage: 'verbatimCheck',
+                    model: 'rule-based',
+                    messages: [{ role: 'system', content: `similarity=${verbatimSimilarity.toFixed(4)}` }]
                 });
-                promptTrace[promptTrace.length - 1].output = outlandishCheck.isOutlandish ? 'OUTLANDISH' : 'ON_TOPIC';
+                promptTrace[promptTrace.length - 1].output = verbatimSimilarity > 0.95 ? 'VERBATIM' : 'NOT_VERBATIM';
 
-                if (outlandishCheck.isOutlandish) {
-                    threeStepLogic = "outlandish";
+                if (verbatimSimilarity > 0.95) {
+                    threeStepLogic = 'verbatim';
                 } else {
                     questionRevealsAnswer = await evaluateIfQuestionRevealsAnswer(
                         interventionMessage,
@@ -594,9 +411,15 @@ router.post('/message', async (req, res) => {
                         currentQuestionObj.answer,
                         currentQuestionObj.options
                     );
-
-                    if (questionRevealsAnswer) {
-                        threeStepLogic = "semantic";
+                    trackPrompt({
+                        stage: 'questionRevealsAnswer',
+                        model: 'gpt-4o',
+                        messages: [{ role: 'system', content: `questionId=${currentQuestionObj.id}` }],
+                        max_tokens: 5
+                    });
+                    promptTrace[promptTrace.length - 1].output = questionRevealsAnswer === true ? 'YES' : 'NO';
+                    if (questionRevealsAnswer === true) {
+                        threeStepLogic = 'semantic';
                     }
                 }
             }
@@ -629,7 +452,7 @@ router.post('/message', async (req, res) => {
                 { role: 'system', content: systemMessage },
                 ...(questionContextBlock ? [questionContextBlock] : []),
                 ...formattedHistory,
-                { role: 'user', content: originalMessage }
+                { role: 'user', content: effectiveMessage || originalMessage }
             ];
             trackPrompt({ stage: 'finalTutorResponse', model: 'gpt-4', messages: tutorMessages });
             const response = await openai.chat.completions.create({
@@ -641,6 +464,21 @@ router.post('/message', async (req, res) => {
         }
 
         const responsePromptText = formatPromptTraceAsText(promptTrace);
+        if (replayMode) {
+            if (!replayRound) return res.status(400).json({ msg: 'replayRound is required in replay mode' });
+            await ReplayMessage.create({
+                replayRound: String(replayRound),
+                participantId,
+                round: Number(round),
+                currentQuestionId: String(currentQuestionId),
+                message: originalMessage,
+                response: botReplyText,
+                threeStepLogic,
+                promptText: responsePromptText,
+                effectiveMessage,
+                sourceRow: Number(sourceRow) || null
+            });
+        }
         const cacheKey = buildPromptCacheKey(participantId, round, currentQuestionId, message);
         setPromptTextCache(cacheKey, responsePromptText);
         if (!replayMode) {
@@ -658,11 +496,7 @@ router.post('/message', async (req, res) => {
             sender: 'bot',
             wasIntervention: (threeStepLogic !== 'none'),
             threeStepLogic,
-            semanticScore,
-            questionRevealsAnswer,
             interventionType: threeStepLogic, // backwards compatibility
-            interventionScore: semanticScore, // backwards compatibility
-            semanticMatchedBankEntry,
             promptText: responsePromptText,
             isStandalone,
             questionStandalone: isStandalone,
@@ -736,12 +570,7 @@ router.post('/log-message', async (req, res) => {
             message,
             currentQuestionId,
             questionContext,
-            threeStepLogic,
-            semanticScore,
-            interventionType,
-            interventionScore,
-            semanticMatchedBankEntry,
-            questionRevealsAnswer: incomingQuestionRevealsAnswer,
+            threeStepLogic: incomingThreeStepLogic,
             promptText,
             promptTrace,
             isStandalone,
@@ -753,24 +582,24 @@ router.post('/log-message', async (req, res) => {
 
         console.log(`[LOG-MESSAGE] Received: sender=${sender}, qId=${currentQuestionId}, msg_len=${message?.length}`);
 
-        let questionRevealsAnswer = typeof incomingQuestionRevealsAnswer === 'boolean'
-            ? incomingQuestionRevealsAnswer
-            : null;
+        let effectiveThreeStepLogic = ['outlandish', 'verbatim', 'semantic', 'none'].includes(incomingThreeStepLogic)
+            ? incomingThreeStepLogic
+            : 'none';
 
-        // Only evaluate if this is a user message with question context and not already evaluated
-        if (questionRevealsAnswer === null && sender === 'user' && currentQuestionId && questionContext) {
+        if (sender === 'user' && !['outlandish', 'verbatim', 'semantic'].includes(incomingThreeStepLogic) && currentQuestionId && questionContext) {
             console.log(`[EVAL] Evaluating message for Q${currentQuestionId}:`, message.substring(0, 50));
             // Find the question in the question bank to get the correct answer
             const question = questions.find(q => q.id === String(currentQuestionId));
             if (question && question.answer && question.options) {
                 console.log(`[EVAL] Found question, correct answer: ${question.answer}`);
-                questionRevealsAnswer = await evaluateIfQuestionRevealsAnswer(
+                const questionRevealsAnswer = await evaluateIfQuestionRevealsAnswer(
                     message,
                     questionContext,
                     question.answer,
                     question.options
                 );
-                console.log(`[EVAL] Result: ${questionRevealsAnswer}`);
+                effectiveThreeStepLogic = questionRevealsAnswer === true ? 'semantic' : 'none';
+                console.log(`[EVAL] Result: ${questionRevealsAnswer}; threeStepLogic=${effectiveThreeStepLogic}`);
             } else {
                 console.log(`[EVAL] Question not found or missing answer/options`);
             }
@@ -783,48 +612,6 @@ router.post('/log-message', async (req, res) => {
                 ? promptText
                 : formatPromptTraceAsText(promptTrace);
 
-        // threeStepLogic is determined ONLY by the 3-step pipeline.
-        // It is NEVER overwritten by questionRevealsAnswer.
-        let effectiveThreeStepLogic = 'none';
-        if (sender === 'user') {
-            effectiveThreeStepLogic = threeStepLogic || interventionType || 'none';
-        }
-
-        // Preserve actual numerical similarity score. Never default to hardcoded 1.
-        let effectiveSemanticScore = null;
-        if (sender === 'user') {
-            const rawScore = (typeof semanticScore === 'number' && !isNaN(semanticScore))
-                ? semanticScore
-                : interventionScore;
-            if (typeof rawScore === 'number' && !isNaN(rawScore)) {
-                effectiveSemanticScore = rawScore;
-            }
-        }
-
-        const effectiveSemanticMatchedBankEntry =
-            (sender === 'user' && typeof semanticMatchedBankEntry === 'string' && semanticMatchedBankEntry.trim().length > 0)
-                ? semanticMatchedBankEntry.trim()
-                : null;
-
-        let resolvedSemanticMatchedBankEntry = effectiveSemanticMatchedBankEntry;
-        if (!resolvedSemanticMatchedBankEntry && sender === 'user' && currentQuestionId && message && effectiveThreeStepLogic === 'semantic') {
-            try {
-                const currentQuestionObj = questions.find((q) => q.id === String(currentQuestionId));
-                if (currentQuestionObj) {
-                    const extractor = await initializeSemanticSearch();
-                    const messageEmbedding = await extractor(message, { pooling: 'mean', normalize: true });
-                    const messageVector = Array.from(messageEmbedding.data);
-                    const variationEmbeddings = await getSemanticEmbeddingsForQuestion(String(currentQuestionId), currentQuestionObj, extractor);
-                    const bestBankMatch = getBestSemanticBankEntryForQuestion(messageVector, String(currentQuestionId), currentQuestionObj, variationEmbeddings);
-                    if (typeof bestBankMatch.entry === 'string' && bestBankMatch.entry.trim().length > 0) {
-                        resolvedSemanticMatchedBankEntry = bestBankMatch.entry.trim();
-                    }
-                }
-            } catch (fallbackError) {
-                console.error('[LOG-MESSAGE] Semantic bank fallback failed:', fallbackError);
-            }
-        }
-
         const isStandaloneVal = typeof isStandalone === 'boolean'
             ? isStandalone
             : (typeof questionStandalone === 'boolean' ? questionStandalone : true);
@@ -832,23 +619,13 @@ router.post('/log-message', async (req, res) => {
         const cacheKey = buildPromptCacheKey(participantId, round, currentQuestionId, message);
         const cachedPromptText = getPromptTextCache(cacheKey);
         const basePromptText = normalizedPromptText || cachedPromptText;
-        const revealsAnswerOutput =
-            questionRevealsAnswer === null
-                ? 'SKIPPED'
-                : (questionRevealsAnswer ? 'YES' : 'NO');
-        const outlandishOutput = effectiveThreeStepLogic === 'outlandish' ? 'YES' : 'NO';
-        const semanticBankEntryOutput = resolvedSemanticMatchedBankEntry || 'NONE';
         const decisionAuditBlock = [
             '---',
             '',
             'Stage: decisionAudit | model=rule-based',
             `isStandalone: ${isStandaloneVal ? 'YES' : 'NO'}`,
             `wasRewritten: ${wasRewritten ? 'YES' : 'NO'}`,
-            `threeStepLogic: ${effectiveThreeStepLogic}`,
-            `semanticScore: ${effectiveSemanticScore !== null ? effectiveSemanticScore.toFixed(4) : 'N/A'}`,
-            `questionRevealsAnswer: ${revealsAnswerOutput}`,
-            `outlandish: ${outlandishOutput}`,
-            `semanticMatchedBankEntry: ${semanticBankEntryOutput}`
+            `threeStepLogic: ${effectiveThreeStepLogic}`
         ].join('\n');
         const finalPromptText = basePromptText
             ? `${basePromptText}\n\n${decisionAuditBlock}`
@@ -863,11 +640,7 @@ router.post('/log-message', async (req, res) => {
             currentQuestionId: currentQuestionId ? String(currentQuestionId) : undefined,
             wasIntervention: effectiveThreeStepLogic !== 'none',
             threeStepLogic: effectiveThreeStepLogic,
-            semanticScore: effectiveSemanticScore,
             interventionType: effectiveThreeStepLogic,
-            interventionScore: effectiveSemanticScore,
-            semanticMatchedBankEntry: resolvedSemanticMatchedBankEntry,
-            questionRevealsAnswer,
             isStandalone: isStandaloneVal,
             questionStandalone: isStandaloneVal,
             wasRewritten: typeof wasRewritten === 'boolean' ? wasRewritten : false,
@@ -879,15 +652,13 @@ router.post('/log-message', async (req, res) => {
             promptTextCache.delete(cacheKey);
         }
 
-        console.log(`[LOG-MESSAGE] Saving message with threeStepLogic=${effectiveThreeStepLogic}, semanticScore=${effectiveSemanticScore}, questionRevealsAnswer=${questionRevealsAnswer}, isStandalone=${isStandaloneVal}`);
+        console.log(`[LOG-MESSAGE] Saving message with threeStepLogic=${effectiveThreeStepLogic}, isStandalone=${isStandaloneVal}`);
         const savedMessage = await newMessage.save();
         console.log(`[LOG-MESSAGE] Saved successfully:`, savedMessage._id);
 
         res.status(201).json({
             msg: 'Message logged successfully.',
             threeStepLogic: effectiveThreeStepLogic,
-            semanticScore: effectiveSemanticScore,
-            questionRevealsAnswer,
             isStandalone: isStandaloneVal,
             questionStandalone: isStandaloneVal,
             messageId: savedMessage._id

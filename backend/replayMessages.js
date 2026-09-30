@@ -8,24 +8,26 @@ const DEFAULT_OUTPUT = './replay-results.jsonl';
 function printUsage() {
     console.log(`Usage:
   node backend/replayMessages.js --input ./pilot-messages.csv
-  node backend/replayMessages.js --input ./pilot-messages.json --execute
+    node backend/replayMessages.js --input ./pilot-messages.json --replay-round 1 --execute
 
 Options:
   --input <path>       CSV or JSON export of the pilot messages.
   --output <path>      JSONL output path (default: ${DEFAULT_OUTPUT}).
   --base-url <url>     Chat API base URL (default: ${DEFAULT_BASE_URL}).
+    --replay-round <n>   Required isolated replay database/round identifier.
   --execute            Actually call the improved platform. Without this flag, validate only.
 `);
 }
 
 function parseArgs(argv) {
-    const options = { input: '', output: DEFAULT_OUTPUT, baseUrl: DEFAULT_BASE_URL, execute: false };
+    const options = { input: '', output: DEFAULT_OUTPUT, baseUrl: DEFAULT_BASE_URL, replayRound: '', execute: false };
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
         if (arg === '--execute') options.execute = true;
         else if (arg === '--input') options.input = argv[++index] || '';
         else if (arg === '--output') options.output = argv[++index] || DEFAULT_OUTPUT;
         else if (arg === '--base-url') options.baseUrl = argv[++index] || DEFAULT_BASE_URL;
+        else if (arg === '--replay-round') options.replayRound = argv[++index] || '';
         else if (arg === '--help' || arg === '-h') {
             printUsage();
             process.exit(0);
@@ -34,6 +36,7 @@ function parseArgs(argv) {
         }
     }
     if (!options.input) throw new Error('Missing required --input path.');
+    if (!options.replayRound) throw new Error('Missing required --replay-round value.');
     return options;
 }
 
@@ -160,6 +163,8 @@ async function replay(options, rows) {
                     round: Number(row.round),
                     currentQuestionId: row.currentQuestionId,
                     chatHistory: history,
+                    replayRound: options.replayRound,
+                    sourceRow: row.sourceRow,
                     replayMode: true
                 })
             });

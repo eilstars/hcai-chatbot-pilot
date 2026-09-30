@@ -127,9 +127,6 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
             // Extract the reply and tracking metrics from backend response
             const botReplyText = response.data.message || response.data.reply;
             const threeStepLogic = response.data.threeStepLogic || response.data.interventionType || 'none';
-            const semanticScore = response.data.semanticScore ?? response.data.interventionScore ?? null;
-            const questionRevealsAnswer = response.data.questionRevealsAnswer ?? null;
-            const semanticMatchedBankEntry = response.data.semanticMatchedBankEntry || null;
             const isStandalone = response.data.isStandalone ?? response.data.questionStandalone ?? true;
             const questionStandalone = isStandalone;
             const wasRewritten = response.data.wasRewritten;
@@ -151,11 +148,6 @@ const Chatbot = ({ participantId, round, onComplete, preTestResults = [], testTy
                     currentQuestionId: currentQId,
                     questionContext: currentQuestion.text,
                     threeStepLogic,
-                    semanticScore,
-                    questionRevealsAnswer,
-                    interventionType: threeStepLogic,
-                    interventionScore: semanticScore,
-                    semanticMatchedBankEntry,
                     promptText,
                     isStandalone,
                     questionStandalone,
